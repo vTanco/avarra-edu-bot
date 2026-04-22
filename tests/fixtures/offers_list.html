@@ -1,0 +1,342 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es"><head><link type="text/css" rel="stylesheet" href="/atp/javax.faces.resource/primefaces.css.xhtml?ln=primefaces&amp;v=5.2"><script type="text/javascript" async="" src="https://www.googletagmanager.com/gtag/js?id=G-Y55SL8EZ40&amp;cx=c&amp;_slc=1"></script><script async="" src="https://www.google-analytics.com/analytics.js"></script><script type="text/javascript" src="/atp/javax.faces.resource/jquery/jquery.js.xhtml?ln=primefaces&amp;v=5.2"></script><script type="text/javascript" src="/atp/javax.faces.resource/jquery/jquery-plugins.js.xhtml?ln=primefaces&amp;v=5.2"></script><script type="text/javascript" src="/atp/javax.faces.resource/primefaces.js.xhtml?ln=primefaces&amp;v=5.2"></script><script type="text/javascript">if(window.PrimeFaces){}</script>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Language" content="Spanish">
+    <meta name="Content-Language" content="Spanish">
+    <meta name="Keywords" content="ATP, Adjudicación Telemática de Plazas">
+    <meta name="Description" content="Contratación temporal de personal docente: Adjudicación telemática de plazas (ATP)">
+    <meta name="Owner" content="Gobierno de Navarra">
+    
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/app.css">
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/font-awesome.min.css">       <!--[if lt IE 9]>                  <script type="text/javascript" src="/atp/resources/theme/2_3/js/html5shiv.min.js"></script>                  <script type="text/javascript" src="/atp/resources/theme/2_3/js/respond.min.js"></script>       <![endif]-->
+
+	<title>Adjudicación Telemática de Plazas (ATP)</title>
+    <script>
+      $(document).ready(function() {
+    	  GN.EDU.rrhh.lw.table.initPaginatorStyle();
+      });
+    </script>
+	
+	<script type="text/javascript">
+    if (window.jQuery) {
+      $(document).ready(function() {
+        GN.EDU.rrhh.lw.button.loading.init();
+        GN.EDU.rrhh.lw.button.activeToggle();
+        GN.EDU.rrhh.lw.button.loadTooltips();
+      });
+	}
+
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+   
+    ga('create', 'UA-97221084-1', 'auto');
+    ga('send', 'pageview');
+    </script></head><body>
+    <div id="wrapper">
+    
+      <nav id="topnavbar" class="navbar navbar-default navbar-fixed-top" style="background-color:#fff;">
+        <map title="navegación primer nivel del portal" id="menuEspecial" class="hidden-xs">
+          <ul>
+            <li class="logo">
+              <a href="//www.navarra.es/home_es/">
+                <i class="sprite sprite-logo-navarra-es-p"></i>
+                <span>navarra.es</span>
+                &nbsp;<i class="fa fa-flask fa-2x" style="color:red; display:none;">PRO</i>
+              </a>
+            </li>
+            <li class="primero"><a href="//www.navarra.es/home_es/Navarra/">Navarra</a></li>
+            <li class="on"><a href="//www.navarra.es/home_es/Servicios/">Trámites</a></li>
+            <li><a href="//www.navarra.es/home_es/Temas/">Temas</a></li>
+            <li><a href="//www.navarra.es/home_es/Gobierno+de+Navarra/">Gobierno</a></li>
+            <li><a href="//www.navarra.es/home_es/Actualidad/">Actualidad</a></li>
+          </ul>
+        </map>
+
+        <div class="navbar-header">
+          <a href="/atp/index.jsp" class="navbar-brand sprite sprite-logo-cab-edu" title="Nafarroako Gobernua / Gobierno de Navarra"></a>
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Desplegar navegación</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button><a href="/atp/help_es.xhtml" class="navbar-brand" title="Ayuda">
+                  <i class="fa fa-question-circle"></i> Ayuda</a>
+        </div>
+<form id="idiomasForm" name="idiomasForm" method="post" action="/atp/auth/areapersonal.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="idiomasForm" value="idiomasForm">
+
+          <div id="navbar" class="navbar-collapse collapse">
+
+            <ul class="nav navbar-nav navbar-right" style="padding-right:10px;">
+              <li class="idiomaActivo">
+<script type="text/javascript" src="/atp/javax.faces.resource/jsf.js.xhtml?ln=javax.faces"></script>
+<a id="idiomacastellano" href="#" onclick="mojarra.jsfcljs(document.getElementById('idiomasForm'),{'idiomacastellano':'idiomacastellano','lang':'es_ES','convid':''},'');return false">Castellano</a>
+              </li>
+              <li class="idiomaNormal"><a id="idiomaeuskara" href="#" onclick="mojarra.jsfcljs(document.getElementById('idiomasForm'),{'idiomaeuskara':'idiomaeuskara','lang':'eu_ES','convid':''},'');return false">Euskara</a>
+              </li>
+              <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" aria-expanded="false" role="button">
+                  <i class="fa fa-user"></i> Vicente Tanco Aguas
+                  <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu dropdown-user">
+                  <li><a href="/atp/auth/areapersonal.xhtml">
+                    <i class="fa fa-lock"></i> Mi ATP</a>
+                  </li>
+                  <li><a href="/atp/logout.xhtml">
+                    <i class="fa fa-sign-out"></i> Salir</a>
+                  </li>
+                </ul>
+              </li>
+              
+            </ul>
+          </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-6470268413223344010:-5090492360273180266" autocomplete="off">
+</form>
+      </nav>
+      
+      <div id="page-content-wrapper" class="container-fluid">
+        <div style="margin-top: 15px"></div>
+        <ul class="breadcrumb hide hidden-xs">
+          <li><a id="goHome" href="/atp/index.jsp" title="Ir al inicio" style="text-decoration:none;" class="fa fa-home fa-2x"></a></li>
+        </ul>
+        
+        <noscript>
+          <div class="alert alert-danger">
+            <i class="fa fa-alert fa-2x"></i>
+            <h2>JavaScript no está habilitado.</h2>
+            <h3><a href="http://enable-javascript.com/es/" target="_blank" rel="noopener noreferrer">Habilite JavaScript</a> para una correcta experiencia de usuario.</h3>
+          </div>
+	    </noscript>
+<form id="formAreaPersonal" name="formAreaPersonal" method="post" action="/atp/auth/areapersonal.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formAreaPersonal" value="formAreaPersonal">
+
+      
+      <h3><i class="fa fa-lock"></i> Mi ATP - Vicente Tanco Aguas</h3>
+      
+      <div style="margin-top: 10px;"></div>
+      
+      <ul class="nav nav-tabs nav-justified nav-justified-nostack">
+        <li><a href="../index.xhtml">Convocatorias en curso&nbsp;&nbsp;</a></li>
+        <li><a href="../convocatorias_resueltas.xhtml">Convocatorias resueltas</a></li>
+        <li class="active"><a href="auth/areapersonal.xhtml"><i class="fa fa-lock"></i> Mi ATP</a></li>
+      </ul>
+      
+      <div class="btn-group" role="group" style="margin-top:1em; margin-bottom:1em">
+        <a href="#" class="btn btn-primary">Convocatorias</a>
+        <!-- &lt;a href="disponibilidad.xhtml" class="btn btn-default"&gt;&lt;i class="fa fa-check-square-o"/&gt; Disponibilidad&lt;/a&gt; -->
+        <a target="_blank" href="https://appseducacion.navarra.es/listasdocentes/pages/private/tuSituacionListas.xhtml" class="btn btn-default"><i class="fa fa-external-link"></i> Mi situación en listas</a>
+      </div>
+      
+      <div id="pageInfo" class="panel panel-default pageinfo">
+        <a href="#" class="close" style="margin-right: 5px;" data-target="#pageInfo" data-dismiss="alert" aria-label="close">×</a>
+        <div class="panel-body" style="padding:5px;">
+          <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Se muestran las <b>convocatorias en curso</b> y las listas por las que está convocado/a así como las ofertas de esas listas.</p>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-xs-12">
+            <div class="panel panel-default">
+              <div class="panel-body">
+              
+                <div class="col-xs-10 col-sm-9" style="padding: 0px;">
+                  <span style="font-size:22px;">
+                    <a href="/atp/convocatoria/ficha.xhtml?convid=1204">Convocatoria 69/2026</a>
+                  </span>
+                </div>
+                <div class="col-xs-2 col-sm-3" style="padding: 0px;"><a id="j_idt41:0:participarBtn" name="j_idt41:0:participarBtn" href="/atp/private/missolicitudes.xhtml?convid=1204" class="btn btn-primary pull-right showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Pulse para participar en la convocatoria. Deberá acceder con certificado de usuario, Cl@ve o usuario EDUCA.">Participar</a>
+                </div>
+                
+                <div class="row" style="margin-top:2em;">
+                  <div class="col-xs-12">
+                  </div>
+                </div>
+                
+                <dl style="margin-bottom:0px;">
+                  <div class="row">                  
+                    <div class="col-xs-6 col-sm-4 col-md-3">
+                      <dt>Tipo de convocatoria</dt>
+                      <dd><span id="j_idt41:0:label-diaria2" style="font-size:1.1em;">
+                          <span class="label label-info showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Convocatoria diaria.">
+                            <i class="fa fa-calendar-check-o" aria-hidden="true"></i> Diaria
+                          </span></span>
+                      </dd>
+                    </div>
+                    
+                    <div class="col-xs-6 col-sm-4 col-md-3">
+                      <dt>Estado</dt>
+                      <dd><div style="color:green; font-weight:bold; height:100%; padding:1px 12px 6px 0px; font-size:14px; line-height:1.42857143;">
+                          <i class="fa fa-check" style="color:green;">Abierta participación</i></div>
+                      </dd>
+                    </div>
+                    
+                    <div class="col-xs-12 col-sm-8">
+                      <dt>Descripción</dt>
+                      <dd><span title="Hay ofertas de los siguientes cuerpos: PROFESORES DE ENSEÑANZA SECUNDARIA, MAESTROS.">Hay ofertas de los siguientes cuerpos: PROFESORES DE ENSEÑANZA SECUNDARIA, MAESTROS.</span></dd>
+                    </div>
+                    <div class="col-xs-6 col-sm-2">
+                      <dt>Fecha inicio participación</dt>
+                      <dd>22-04-2026 14:00
+                      </dd>
+                    </div>
+                    <div class="col-xs-6 col-sm-2">
+                      <dt>Fecha fin participación</dt>
+                      <dd>23-04-2026 08:30
+                      </dd>
+                    </div>
+                  </div>
+                </dl>
+
+                <div style="margin-top:10px;"></div><div class="row">
+                  <div class="col-xs-12">
+                    <div class="panel panel-default" style="margin:0px; padding:0px;">
+                      <div class="panel-heading panel-heading-collapse collapsed in" role="tab" data-toggle="collapse" href="#collapseLista11204" style="cursor: pointer;">
+                        <div class="panel-title">
+                        <span>Mis listas de la convocatoria <div class="badge">2</div></span>
+                        </div>
+                      </div>
+                      <div aria-expanded="true" id="collapseLista11204" class="panel-collapse collapse" role="tabpanel"><table class="table table-condensed">
+<thead>
+<tr>
+<th scope="col">Lista de la oferta</th>
+<th scope="col">Lista por la que está convocado/a</th>
+<th scope="col">Tipo de participación
+                              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="&lt;u&gt;Obligatoria&lt;/u&gt;: La participación es obligatoria excepto para las plazas de petición voluntaria (artículo 16.2 de la Orden Foral 37/2020). &lt;br/&gt; &lt;u&gt;Voluntaria&lt;/u&gt;: Al aspirante no se le pondrá no disponible por no haber elegido alguna plaza."></i></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0590/INSTALACIONES ELECTROTÉCNICAS/C</td>
+<td>
+                            0590/EQUIPOS ELECTRÓNICOS/C
+                          </td>
+<td>
+                            Voluntaria
+                          </td>
+</tr>
+<tr>
+<td>0590/ORGANIZACIÓN Y PROYECTOS DE FABRICACIÓN MECÁNICA/C</td>
+<td>
+                            0590/ORGANIZACIÓN Y PROYECTOS DE FABRICACIÓN MECÁNICA/C
+                          </td>
+<td>
+                            Voluntaria
+                          </td>
+</tr>
+</tbody>
+</table>
+
+                      </div>
+                    </div>
+                  </div></div>
+
+                <div style="margin-top:10px;"></div><div class="row">
+                  <div class="col-xs-12">
+                    <div class="panel panel-default" style="margin:0px; padding:0px;">
+                      <div class="panel-heading panel-heading-collapse collapsed in" role="tab" data-toggle="collapse" href="#collapseLista21204" style="cursor: pointer;">
+                        <div class="panel-title">
+                          <span>Mis ofertas de la convocatoria  <div class="badge">2</div><a id="j_idt41:0:exportCsvAux" href="#" style="margin-left:5px;" title="Exportar a CSV." onclick="mojarra.jsfcljs(document.getElementById('formAreaPersonal'),{'j_idt41:0:exportCsvAux':'j_idt41:0:exportCsvAux','convid':'1204'},'');return false" class="btn btn-default">
+                              <i class="fa fa-file-text-o"></i></a>
+                          </span>
+                        </div>
+                      </div>
+                      <div aria-expanded="true" id="collapseLista21204" class="panel-collapse collapse" role="tabpanel"><div id="j_idt41:0:j_idt88" class="ui-datatable ui-widget"><div class="ui-datatable-tablewrapper"><table role="grid" class="table table-condensed"><thead id="j_idt41:0:j_idt88_head"><tr role="row"><th id="j_idt41:0:j_idt88:j_idt89" class="ui-state-default" role="columnheader" style="width:5px"><span class="ui-column-title"></span></th><th id="j_idt41:0:j_idt88:cIdOfertaGCD" class="ui-state-default ui-sortable-column" role="columnheader" style="width:15px" tabindex="0"><span class="ui-column-title">Id.</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cListaBaseNombre" class="ui-state-default ui-sortable-column" role="columnheader" style="width:150px" tabindex="0"><span class="ui-column-title">Lista
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Cuerpo / Especialidad / Idioma [C = Castellano, E = Euskara]"></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cLocalidad" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Localidad</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cCentro" class="ui-state-default ui-sortable-column" role="columnheader" style="width:200px" tabindex="0"><span class="ui-column-title">Centro</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cTipoOferta" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Tipo oferta
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="N (Necesidad) o S (Sustitución)"></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cPerfiles" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Perfiles</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cTipoJornada" class="ui-state-default ui-sortable-column" role="columnheader" style="width:120px" tabindex="0"><span class="ui-column-title">Jornada (horas lectivas)</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cEsItinerante" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Itin.
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Puede consultar más información sobre las itinerancias en las observaciones de la oferta."></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="j_idt41:0:j_idt88:cHabilidades" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Hab.
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Puede consultar más información sobre las habilidades en las observaciones de la oferta."></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th></tr></thead><tbody id="j_idt41:0:j_idt88_data" class="ui-datatable-data ui-widget-content"><tr data-ri="0" class="ui-widget-content ui-datatable-even " role="row"><td role="gridcell">          
+                          <button id="expandButton0" class="btn btn-default btn-sm tieneObservaciones" onclick="GN.EDU.rrhh.lw.table.onRowExpansion(this); return false;" title="Ver ficha completa de la oferta. La oferta tiene observaciones añadidas.">
+                            <i class="fa fa-angle-down"></i>
+                          </button>
+                          <span class="hidden"><div class="ui-row-toggler ui-icon ui-icon-circle-triangle-s"></div></span></td><td role="gridcell">121776</td><td role="gridcell">0590/INSTALACIONES ELECTROTÉCNICAS/C</td><td role="gridcell">PAMPLONA</td><td role="gridcell">CI SAN JUAN-DONIBANE</td><td role="gridcell"><span title="SUSTITUCIÓN">S</span></td><td role="gridcell"></td><td role="gridcell">SUPERIOR A MEDIA JORNADA (12)</td><td role="gridcell">No</td><td role="gridcell">No</td></tr><tr class="ui-expanded-row-content ui-widget-content"><td colspan="10">
+            <div class="col-xs-2">
+              <dl>
+                <dt>Fecha inicio</dt>
+                <dd>24-04-2026</dd>
+              </dl>
+            </div>
+            <div class="col-xs-2">
+              <dl>
+                <dt>Fecha fin (máxima)</dt>
+                <dd>30-06-2026</dd>
+              </dl>
+            </div>
+            <div class="col-xs-2">
+              <dl>
+                <dt>Motivo</dt>
+                <dd>BAJA POR ENFERMEDAD</dd>
+              </dl>
+            </div>
+              <div>
+                <dl>
+                  <dt>Observaciones</dt>
+                  <dd>15 [12 horas]</dd>
+                </dl>
+              </div></td></tr><tr data-ri="1" class="ui-widget-content ui-datatable-odd " role="row"><td role="gridcell">          
+                          <button id="expandButton1" class="btn btn-default btn-sm tieneObservaciones" onclick="GN.EDU.rrhh.lw.table.onRowExpansion(this); return false;" title="Ver ficha completa de la oferta. La oferta tiene observaciones añadidas.">
+                            <i class="fa fa-angle-down"></i>
+                          </button>
+                          <span class="hidden"><div class="ui-row-toggler ui-icon ui-icon-circle-triangle-s"></div></span></td><td role="gridcell">121820</td><td role="gridcell">0590/ORGANIZACIÓN Y PROYECTOS DE FABRICACIÓN MECÁNICA/C</td><td role="gridcell">SAN ADRIÁN</td><td role="gridcell">IES EGA</td><td role="gridcell"><span title="SUSTITUCIÓN">S</span></td><td role="gridcell"></td><td role="gridcell">SUPERIOR A MEDIA JORNADA (17)</td><td role="gridcell">No</td><td role="gridcell">No</td></tr><tr class="ui-expanded-row-content ui-widget-content"><td colspan="10">
+            <div class="col-xs-2">
+              <dl>
+                <dt>Fecha inicio</dt>
+                <dd>04-05-2026</dd>
+              </dl>
+            </div>
+            <div class="col-xs-2">
+              <dl>
+                <dt>Fecha fin (máxima)</dt>
+                <dd>28-06-2026</dd>
+              </dl>
+            </div>
+            <div class="col-xs-2">
+              <dl>
+                <dt>Motivo</dt>
+                <dd>PERMISO PATERNIDAD</dd>
+              </dl>
+            </div>
+              <div>
+                <dl>
+                  <dt>Observaciones</dt>
+                  <dd>02 [17 horas]</dd>
+                </dl>
+              </div></td></tr></tbody></table></div></div>
+                    </div>
+                  </div>
+                </div></div>
+     
+              </div>
+            </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;">
+        <h4></h4>
+      </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-6470268413223344010:-5090492360273180266" autocomplete="off">
+</form>
+        
+      </div>
+    </div>
+    
+    <div class="navbar navbar-default navbar-fixed-bottom hidden-xs" style="min-height: 0px; background-color:white; border:0px;">
+      <div class="container-fluid">
+        <div id="pie">
+          <!--googleoff: all-->
+          <a href="//www.navarra.es/home_es" class="gobiernoNavarra">
+            <i class="sprite sprite-logo-pie-es" alt="Nafarroako Gobernua / Gobierno de Navarra"></i>
+          </a>
+          <p>
+            <a href="//www.navarra.es/home_es/Indices/Sugerencias/default.htm" accesskey="c">Contacte con nosotros</a> | 
+            <a href="//www.navarra.es/home_es/Aviso/accesibilidad.htm" accesskey="2">Accesibilidad</a> | 
+            <a href="//www.navarra.es/home_es/Aviso/avisoLegal.htm">Aviso legal</a> | 
+            <a href="//www.navarra.es/home_es/Indices/Mapa+web/" accesskey="m">Mapa web</a>
+          </p>
+          <!--googleon: all-->
+        </div>
+      </div>
+    </div><script type="text/javascript" src="/atp/javax.faces.resource/js/bootstrap.min.js.xhtml?ln=theme&amp;v=2_3"></script><script type="text/javascript" src="/atp/javax.faces.resource/js/app.js.xhtml?ln=theme&amp;v=2_3"></script>
+  
+</body></html>

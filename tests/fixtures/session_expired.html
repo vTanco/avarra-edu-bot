@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es"><head><script type="text/javascript">if(window.PrimeFaces){}</script>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="Language" content="Spanish" />
+    <meta name="Content-Language" content="Spanish" />
+    <meta name="Keywords" content="ATP, Adjudicación Telemática de Plazas" />
+    <meta name="Description" content="Contratación temporal de personal docente: Adjudicación telemática de plazas (ATP)" />
+    <meta name="Owner" content="Gobierno de Navarra" />
+    
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/app.css" />
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/font-awesome.min.css" />       <!--[if lt IE 9]>                  <script type="text/javascript" src="/atp/resources/theme/2_3/js/html5shiv.min.js"></script>                  <script type="text/javascript" src="/atp/resources/theme/2_3/js/respond.min.js"></script>       <![endif]-->
+
+	<title>Adjudicación Telemática de Plazas (ATP)</title><script type="text/javascript" src="/atp/javax.faces.resource/jquery/jquery.js.xhtml;jsessionid=TT-0Aa5FZ0OM3iyUe-9izkqn?ln=primefaces&amp;v=5.2"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $('.list-group-item-heading .label.link').on('click', function(e) {
+          e.preventDefault();
+          window.location.href = $(this).data('href');
+        });
+        $('.list-group-item-heading .label.showtooltip').on('click', function(e) {
+          e.preventDefault();
+        });
+      });
+    </script>
+    <style>	
+      .label.link:hover {
+        color: blue;
+        background-color: #fff;
+      }
+    </style>
+	
+	<script type="text/javascript">
+    if (window.jQuery) {
+      $(document).ready(function() {
+        GN.EDU.rrhh.lw.button.loading.init();
+        GN.EDU.rrhh.lw.button.activeToggle();
+        GN.EDU.rrhh.lw.button.loadTooltips();
+      });
+	}
+
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+   
+    ga('create', 'UA-97221084-1', 'auto');
+    ga('send', 'pageview');
+    </script></head><body>
+    <div id="wrapper">
+    
+      <nav id="topnavbar" class="navbar navbar-default navbar-fixed-top" style="background-color:#fff;">
+        <map title="navegación primer nivel del portal" id="menuEspecial" class="hidden-xs">
+          <ul>
+            <li class="logo">
+              <a href="//www.navarra.es/home_es/">
+                <i class="sprite sprite-logo-navarra-es-p"></i>
+                <span>navarra.es</span>
+                 <i class="fa fa-flask fa-2x" style="color:red; display:none;">PRO</i>
+              </a>
+            </li>
+            <li class="primero"><a href="//www.navarra.es/home_es/Navarra/">Navarra</a></li>
+            <li class="on"><a href="//www.navarra.es/home_es/Servicios/">Trámites</a></li>
+            <li><a href="//www.navarra.es/home_es/Temas/">Temas</a></li>
+            <li><a href="//www.navarra.es/home_es/Gobierno+de+Navarra/">Gobierno</a></li>
+            <li><a href="//www.navarra.es/home_es/Actualidad/">Actualidad</a></li>
+          </ul>
+        </map>
+
+        <div class="navbar-header">
+          <a href="/atp/index.jsp" class="navbar-brand sprite sprite-logo-cab-edu" title="Nafarroako Gobernua / Gobierno de Navarra"></a>
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Desplegar navegación</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button><a href="/atp/help_es.xhtml;jsessionid=TT-0Aa5FZ0OM3iyUe-9izkqn" class="navbar-brand" title="Ayuda">
+                  <i class="fa fa-question-circle"></i> Ayuda</a>
+        </div>
+<form id="idiomasForm" name="idiomasForm" method="post" action="/atp/index.xhtml;jsessionid=TT-0Aa5FZ0OM3iyUe-9izkqn" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="idiomasForm" value="idiomasForm" />
+
+          <div id="navbar" class="navbar-collapse collapse"><html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es">
+</html>
+            <ul class="nav navbar-nav navbar-right" style="padding-right:10px;">
+              <li class="idiomaActivo">
+<script type="text/javascript" src="/atp/javax.faces.resource/jsf.js.xhtml?ln=javax.faces"></script>
+<a id="idiomacastellano" href="#" onclick="mojarra.jsfcljs(document.getElementById('idiomasForm'),{'idiomacastellano':'idiomacastellano','lang':'es_ES','convid':''},'');return false">Castellano</a>
+              </li>
+              <li class="idiomaNormal"><a id="idiomaeuskara" href="#" onclick="mojarra.jsfcljs(document.getElementById('idiomasForm'),{'idiomaeuskara':'idiomaeuskara','lang':'eu_ES','convid':''},'');return false">Euskara</a>
+              </li>
+              
+            </ul>
+          </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="511140804411781599:-533190287717164232" autocomplete="off" />
+</form>
+      </nav>
+      
+      <div id="page-content-wrapper" class="container-fluid">
+        <div style="margin-top: 15px"></div>
+        <ul class="breadcrumb hide hidden-xs">
+          <li><a id="goHome" href="/atp/index.jsp" title="Ir al inicio" style="text-decoration:none;" class="fa fa-home fa-2x"></a></li>
+        </ul>
+        
+        <noscript>
+          <div class="alert alert-danger">
+            <i class="fa fa-alert fa-2x"></i>
+            <h2>JavaScript no está habilitado.</h2>
+            <h3><a href="http://enable-javascript.com/es/" target="_blank" rel="noopener noreferrer">Habilite JavaScript</a> para una correcta experiencia de usuario.</h3>
+          </div>
+	    </noscript>
+  
+    <h3>Adjudicación Telemática de Plazas (ATP)</h3>
+<form id="formIndex" name="formIndex" method="post" action="/atp/index.xhtml;jsessionid=TT-0Aa5FZ0OM3iyUe-9izkqn" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formIndex" value="formIndex" />
+
+      
+      <div style="margin-top: 20px;"></div>
+
+      <div style="margin-top: 10px;"></div>
+
+      <ul class="nav nav-tabs nav-justified nav-justified-nostack">
+        <li class="active"><a>Convocatorias en curso</a></li>
+        <li><a href="convocatorias_resueltas.xhtml">Convocatorias resueltas</a></li>
+        <li><a href="auth/areapersonal.xhtml"><i class="fa fa-lock"></i> Mi ATP</a></li>
+      </ul>
+  
+      <div id="pageInfo" class="panel panel-default pageinfo">
+        <a href="#" class="close" style="margin-right: 5px;" data-target="#pageInfo" data-dismiss="alert" aria-label="close">×</a>
+        <div class="panel-body" style="padding:5px;">
+          <p><i class="fa fa-info-circle fa-2x"></i> A continuación podrá consultar la situación en la que se encuentran las convocatorias en curso. Pulse sobre la convocatoria para conocer más detalles y poder participar en el caso de estar convocado/a.</p>
+        </div>
+      </div>
+        
+      <div class="row" style="margin-top:5px;">
+        <div class="col-xs-12">
+        
+        <div class="list-group">
+            <a href="/atp/convocatoria/ficha.xhtml?convid=1204" class="list-group-item">
+            <div class="list-group-item-heading">
+              <div class="col-xs-10 col-sm-9" style="padding: 0px;">
+                <span style="font-size:22px;">
+                  Convocatoria 69/2026
+                </span>
+                <span style="font-size:20px;">
+                  <span class="fa fa-check" title="Abierta participación" style="color:green;"> Abierta participación</span>
+                </span>
+              </div>
+              <div class="col-xs-2 col-sm-3" style="padding: 0px;">
+                <span class="label label-default pull-right link" style="margin-bottom:1px; margin-left: 1px;" data-href="/atp/convocatoria/ofertas.xhtml?convid=1204">
+                  29 ofertas
+                </span>
+                <span class="label label-default pull-right link" style="margin-left: 1px;" data-href="/atp/convocatoria/aspirantes.xhtml?convid=1204">
+                  24 listas
+                </span><span id="j_idt40:0:label-diaria" style="font-size:1.1em;">
+                  <span class="label label-info pull-right showtooltip" title="Convocatoria diaria.">
+                    <i class="fa fa-calendar-check-o" aria-hidden="true"></i> Diaria
+                  </span></span>
+             </div>
+             </div>
+              <dl style="margin-bottom:0px;">
+                <div class="row">
+                  <div class="col-xs-12 col-sm-8">
+                    <dt>Descripción</dt>
+                    <dd><span title="Hay ofertas de los siguientes cuerpos: PROFESORES DE ENSEÑANZA SECUNDARIA, MAESTROS.">Hay ofertas de los siguientes cuerpos: PROFESORES DE ENSEÑANZA SECUNDARIA, MAESTROS.</span></dd>
+                  </div>
+                  <div class="col-xs-6 col-sm-2">
+                    <dt>Fecha inicio participación</dt>
+                    <dd>22-04-2026 14:00
+                    </dd>
+                  </div>
+                  <div class="col-xs-6 col-sm-2">
+                    <dt>Fecha fin participación</dt>
+                    <dd>23-04-2026 08:30
+                    </dd>
+                  </div>
+                </div>
+              </dl>
+            </a>
+        </div>
+        </div>
+      </div>
+      
+      <div style="text-align:center;">
+        <h4></h4>
+      </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="511140804411781599:-533190287717164232" autocomplete="off" />
+</form>
+        
+      </div>
+    </div>
+    
+    <div class="navbar navbar-default navbar-fixed-bottom hidden-xs" style="min-height: 0px; background-color:white; border:0px;">
+      <div class="container-fluid">
+        <div id="pie">
+          <!--googleoff: all-->
+          <a href="//www.navarra.es/home_es" class="gobiernoNavarra">
+            <i class="sprite sprite-logo-pie-es" alt="Nafarroako Gobernua / Gobierno de Navarra"></i>
+          </a>
+          <p>
+            <a href="//www.navarra.es/home_es/Indices/Sugerencias/default.htm" accesskey="c">Contacte con nosotros</a> | 
+            <a href="//www.navarra.es/home_es/Aviso/accesibilidad.htm" accesskey="2">Accesibilidad</a> | 
+            <a href="//www.navarra.es/home_es/Aviso/avisoLegal.htm">Aviso legal</a> | 
+            <a href="//www.navarra.es/home_es/Indices/Mapa+web/" accesskey="m">Mapa web</a>
+          </p>
+          <!--googleon: all-->
+        </div>
+      </div>
+    </div><script type="text/javascript" src="/atp/javax.faces.resource/js/bootstrap.min.js.xhtml;jsessionid=TT-0Aa5FZ0OM3iyUe-9izkqn?ln=theme&amp;v=2_3"></script><script type="text/javascript" src="/atp/javax.faces.resource/js/app.js.xhtml;jsessionid=TT-0Aa5FZ0OM3iyUe-9izkqn?ln=theme&amp;v=2_3"></script></body>
+  
+</html>
