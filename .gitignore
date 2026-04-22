@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+*.log
+.DS_Store
+config.yaml
+!config.example.yaml

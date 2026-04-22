@@ -1,0 +1,33 @@
+[project]
+name = "navarra-edu-bot"
+version = "0.1.0"
+description = "Automated bidding for Navarra education telematic adjudication"
+requires-python = ">=3.12"
+dependencies = [
+    "playwright>=1.44.0",
+    "python-telegram-bot>=21.0",
+    "pydantic>=2.7.0",
+    "pyyaml>=6.0.1",
+    "aiohttp>=3.9.0",
+    "structlog>=24.1.0",
+    "click>=8.1.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+navarra-edu-bot = "navarra_edu_bot.cli:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
