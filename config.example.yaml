@@ -1,0 +1,59 @@
+# Copy this file to ~/.navarra-edu-bot/config.yaml and edit.
+# Secrets (token, chat_id, credentials) live in macOS Keychain, NOT here.
+
+portal:
+  base_url: "https://appseducacion.navarra.es/atp/"
+  login_path: "index.xhtml"
+
+user:
+  preferred_localities:
+    - "Pamplona"
+    - "Orkoien"
+    - "Orcoyen"
+    - "Barañáin"
+    - "Baranain"
+  specialty_preference_order:
+    - "Tecnología"
+    - "Matemáticas"
+    - "Dibujo"
+
+# Listas donde el usuario está "Disponible" (L/M/X/V).
+available_lists:
+  - body: "0590"
+    specialty: "Equipos Electrónicos"
+  - body: "0590"
+    specialty: "Organización y Proyectos de Fabricación Mecánica"
+  - body: "0590"
+    specialty: "Sistemas Electrotécnicos y Automáticos"
+  - body: "0590"
+    specialty: "Sistemas Electrónicos"
+  - body: "0590"
+    specialty: "Tecnología"
+    list_type: "CONVOCATORIA"
+  - body: "0598"
+    specialty: "Fabricación e Instalación de Carpintería y Mueble"
+  - body: "0598"
+    specialty: "Mantenimiento de Vehículos"
+
+# Listas abiertas los jueves según formación (confirmar con RD).
+thursday_open_specialties:
+  - body: "0590"
+    specialty: "Tecnología"
+  - body: "0590"
+    specialty: "Matemáticas"
+  - body: "0590"
+    specialty: "Dibujo"
+  - body: "0590"
+    specialty: "Física y Química"
+  # (completar tras revisar docs/formacion-especialidades.md)
+
+scheduler:
+  daily_start: "13:25"
+  daily_end: "14:05"
+  poll_interval_seconds: 15
+
+runtime:
+  dry_run: true
+  log_level: "INFO"
+  storage_path: "~/.navarra-edu-bot/state.db"
+  log_path: "~/.navarra-edu-bot/logs/"
