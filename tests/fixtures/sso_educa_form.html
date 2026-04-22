@@ -1,0 +1,248 @@
+<!DOCTYPE html><html class="" lang="es" dir="ltr"><head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Inicia sesión en Departamento de Educación del Gobierno de Navarra</title>
+    <link rel="icon" href="/auth/resources/h3sd8/login/dpto-general-sin-clave/img/favicon.ico">
+            <link href="/auth/resources/h3sd8/common/keycloak/vendor/patternfly-v4/patternfly.min.css" rel="stylesheet">
+            <link href="/auth/resources/h3sd8/common/keycloak/vendor/patternfly-v3/css/patternfly.min.css" rel="stylesheet">
+            <link href="/auth/resources/h3sd8/common/keycloak/vendor/patternfly-v3/css/patternfly-additions.min.css" rel="stylesheet">
+            <link href="/auth/resources/h3sd8/common/keycloak/lib/pficon/pficon.css" rel="stylesheet">
+            <link href="/auth/resources/h3sd8/login/dpto-general-sin-clave/css/login.css" rel="stylesheet">
+    <script type="importmap">
+        {
+            "imports": {
+                "rfc4648": "/auth/resources/h3sd8/common/keycloak/vendor/rfc4648/rfc4648.js"
+            }
+        }
+    </script>
+    <script src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/menu-button-links.js" type="module"></script>
+    <script type="module">
+        import { startSessionPolling } from "/auth/resources/h3sd8/login/dpto-general-sin-clave/js/authChecker.js";
+
+        startSessionPolling(
+            "/auth/realms/educacion.navarra.es/login-actions/restart?client_id=ateka-pro&tab_id=uHec8SCNuT0&client_data=eyJydSI6Imh0dHBzOi8vYXRla2EubmF2YXJyYS5lcy9hdGVrYS9mZWRlcmF0aW9uL0VkdWNhL3NpZ25pbiIsInJ0IjoiY29kZSIsInN0IjoiQ2ZESjhDRVFyQUxXcEROTXRVMnZCeDJsY1dCXzBWbE10aW5QcG10U3RiclFwcVdxSWw3a29IMno2aHd5ZUpLbFZKR0ZYeWJ2SGloNDRZVkY3MlhEbXduS2xlaTNrclo3c3c5ckU4aVp2MW5Ia0YwOFNFR3hNRFBMMXJJaWQ3MlRrTkpQWEVwdmd2MkJTTUJzZElNWFpSMUhOQWhPU2h4UlRsY2lGNHJQZmpYa2d2QzVFTWJUS1NSSzlCT1Q4N2g5YndJZ1Zzb2tnT0NvbC10QzBKaEFyemItV3VCZGVfWmFyRXlhTVVMRGdIdG5PUzZzc2M2MUdJUE9sc01Ibld3cGxqWmZnRmJGcFc3dGNiUGE5R2VtZWNQMEZkamdLdm9NM1kzczcwUXFNT250Y0RkUEhDWldDTTNfQW55S3oteEM3UzJYa1QxYlFnUFlNQm9GNmo2dEhjWG1LUWVCNEUwaHdDaDJxU2MwUEZJdFhpaGQ0YjRyMEVvOWZydVRDMTd5ZE9UN1NlbzFrQVRVYndJajRXV21TalhyVE9nOXZ5R21hUDV4NUljRmZ4UlhhNjRmazZaQXpLR0NPQjFHWGJxZGlPdEtSeDdxQnZidDhjNTRGQUx2WS12SUwxS21SWm5xVnV2d3JSV2Z4bkpxR2pzZFQyZHZON2JuMlptTmZobFl4Ym9WX2JzZFVrMEkzNThKWGM4X0JUSTJoUFRtcUpGTjZ5RDdCX1JzdHh5Si1yZC00WTdfcWlCR2d0aEd6c2hXTHVZR3FIN2doYWU1VEhYTExaS3VkWWxwNUpESGowNkRUSXVVcVg4NElDWHJWaWZGTzZUejdoQkFnR1JmNVNlNW1FUzE4Rk9EbXhYOG1ta3Y4OGlKVzFnajE5bEkxM0xZMGRPQjdkVlJwNGZFOWZHSzBuVkJoaTJZdng1c0U3NWI4VkFRZ1VYMnE2bEZqdVU3QXhMbzZRTldqcUFmNTRvZVpKRUpOWG1sVHAxbXhzLVc0WmRkMlJtZ09yQzZtQmJyYWc2dTlmQ0NkdU0ydmFjODAydVJCbFl0dDFHZHZfcENVWlFGdGVSRzJ5ZF82YkkwNGZGeUFwSVllTjQ2MV9aalJjSDhmTEJlellaN28wbFRvRVh4SFV4X0o3QkZ4S0lhUExzU0wxSU50LTJfNnROQkJ1dDNHN05RRHQ2MDBuZ05Od1J3RHUyMVc2TUdSQngzZ1dteVVCc3NtNzZSQUNuRnZyaUEzYkk1YTZUZnFITHZNal91N3Y0dnpYYUdicEZ0NFQtMEV3In0&skip_logout=true"
+        );
+    </script>
+    <script type="module">
+        document.addEventListener("click", (event) => {
+            const link = event.target.closest("a[data-once-link]");
+
+            if (!link) {
+                return;
+            }
+
+            if (link.getAttribute("aria-disabled") === "true") {
+                event.preventDefault();
+                return;
+            }
+
+            const { disabledClass } = link.dataset;
+
+            if (disabledClass) {
+                link.classList.add(...disabledClass.trim().split(/\s+/));
+            }
+
+            link.setAttribute("role", "link");
+            link.setAttribute("aria-disabled", "true");
+        });
+    </script>
+        <script type="module">
+            import { checkAuthSession } from "/auth/resources/h3sd8/login/dpto-general-sin-clave/js/authChecker.js";
+
+            checkAuthSession(
+                "hJuAM8i8yMF9LNANAur7gCRBrZTUP2Z998BHoUEp40w"
+            );
+        </script>
+</head>
+
+<body class="" data-page-id="login-login">
+<div class="login-pf-page">
+    <div id="kc-header" class="login-pf-page-header hidden">
+        <div id="kc-header-wrapper" class="hidden">Departamento de Educación del Gobierno de Navarra</div>
+    </div>
+    <div class="card-pf">
+        <header class="login-pf-header">
+                <div class="hidden" id="kc-locale">
+                    <div id="kc-locale-wrapper" class="">
+                        <div id="kc-locale-dropdown" class="menu-button-links ">
+                            <button tabindex="1" id="kc-current-locale-link" aria-label="languages" aria-haspopup="true" aria-expanded="false" aria-controls="language-switch1">ES</button>
+                            <ul role="menu" tabindex="-1" aria-labelledby="kc-current-locale-link" aria-activedescendant="" id="language-switch1" class="pf-c-dropdown__menu pf-m-align-right">
+                                    <li class="" role="none">
+                                        <a role="menuitem" id="language-1" class="pf-c-dropdown__menu-item" href="/auth/realms/educacion.navarra.es/login-actions/authenticate?client_id=ateka-pro&amp;tab_id=uHec8SCNuT0&amp;client_data=eyJydSI6Imh0dHBzOi8vYXRla2EubmF2YXJyYS5lcy9hdGVrYS9mZWRlcmF0aW9uL0VkdWNhL3NpZ25pbiIsInJ0IjoiY29kZSIsInN0IjoiQ2ZESjhDRVFyQUxXcEROTXRVMnZCeDJsY1dCXzBWbE10aW5QcG10U3RiclFwcVdxSWw3a29IMno2aHd5ZUpLbFZKR0ZYeWJ2SGloNDRZVkY3MlhEbXduS2xlaTNrclo3c3c5ckU4aVp2MW5Ia0YwOFNFR3hNRFBMMXJJaWQ3MlRrTkpQWEVwdmd2MkJTTUJzZElNWFpSMUhOQWhPU2h4UlRsY2lGNHJQZmpYa2d2QzVFTWJUS1NSSzlCT1Q4N2g5YndJZ1Zzb2tnT0NvbC10QzBKaEFyemItV3VCZGVfWmFyRXlhTVVMRGdIdG5PUzZzc2M2MUdJUE9sc01Ibld3cGxqWmZnRmJGcFc3dGNiUGE5R2VtZWNQMEZkamdLdm9NM1kzczcwUXFNT250Y0RkUEhDWldDTTNfQW55S3oteEM3UzJYa1QxYlFnUFlNQm9GNmo2dEhjWG1LUWVCNEUwaHdDaDJxU2MwUEZJdFhpaGQ0YjRyMEVvOWZydVRDMTd5ZE9UN1NlbzFrQVRVYndJajRXV21TalhyVE9nOXZ5R21hUDV4NUljRmZ4UlhhNjRmazZaQXpLR0NPQjFHWGJxZGlPdEtSeDdxQnZidDhjNTRGQUx2WS12SUwxS21SWm5xVnV2d3JSV2Z4bkpxR2pzZFQyZHZON2JuMlptTmZobFl4Ym9WX2JzZFVrMEkzNThKWGM4X0JUSTJoUFRtcUpGTjZ5RDdCX1JzdHh5Si1yZC00WTdfcWlCR2d0aEd6c2hXTHVZR3FIN2doYWU1VEhYTExaS3VkWWxwNUpESGowNkRUSXVVcVg4NElDWHJWaWZGTzZUejdoQkFnR1JmNVNlNW1FUzE4Rk9EbXhYOG1ta3Y4OGlKVzFnajE5bEkxM0xZMGRPQjdkVlJwNGZFOWZHSzBuVkJoaTJZdng1c0U3NWI4VkFRZ1VYMnE2bEZqdVU3QXhMbzZRTldqcUFmNTRvZVpKRUpOWG1sVHAxbXhzLVc0WmRkMlJtZ09yQzZtQmJyYWc2dTlmQ0NkdU0ydmFjODAydVJCbFl0dDFHZHZfcENVWlFGdGVSRzJ5ZF82YkkwNGZGeUFwSVllTjQ2MV9aalJjSDhmTEJlellaN28wbFRvRVh4SFV4X0o3QkZ4S0lhUExzU0wxSU50LTJfNnROQkJ1dDNHN05RRHQ2MDBuZ05Od1J3RHUyMVc2TUdSQngzZ1dteVVCc3NtNzZSQUNuRnZyaUEzYkk1YTZUZnFITHZNal91N3Y0dnpYYUdicEZ0NFQtMEV3In0&amp;execution=d0c25c40-85ad-491b-9103-a7a2fe3ab5b5&amp;kc_locale=es" tabindex="-1">ES</a>
+                                    </li>
+                                    <li class="" role="none">
+                                        <a role="menuitem" id="language-2" class="pf-c-dropdown__menu-item" href="/auth/realms/educacion.navarra.es/login-actions/authenticate?client_id=ateka-pro&amp;tab_id=uHec8SCNuT0&amp;client_data=eyJydSI6Imh0dHBzOi8vYXRla2EubmF2YXJyYS5lcy9hdGVrYS9mZWRlcmF0aW9uL0VkdWNhL3NpZ25pbiIsInJ0IjoiY29kZSIsInN0IjoiQ2ZESjhDRVFyQUxXcEROTXRVMnZCeDJsY1dCXzBWbE10aW5QcG10U3RiclFwcVdxSWw3a29IMno2aHd5ZUpLbFZKR0ZYeWJ2SGloNDRZVkY3MlhEbXduS2xlaTNrclo3c3c5ckU4aVp2MW5Ia0YwOFNFR3hNRFBMMXJJaWQ3MlRrTkpQWEVwdmd2MkJTTUJzZElNWFpSMUhOQWhPU2h4UlRsY2lGNHJQZmpYa2d2QzVFTWJUS1NSSzlCT1Q4N2g5YndJZ1Zzb2tnT0NvbC10QzBKaEFyemItV3VCZGVfWmFyRXlhTVVMRGdIdG5PUzZzc2M2MUdJUE9sc01Ibld3cGxqWmZnRmJGcFc3dGNiUGE5R2VtZWNQMEZkamdLdm9NM1kzczcwUXFNT250Y0RkUEhDWldDTTNfQW55S3oteEM3UzJYa1QxYlFnUFlNQm9GNmo2dEhjWG1LUWVCNEUwaHdDaDJxU2MwUEZJdFhpaGQ0YjRyMEVvOWZydVRDMTd5ZE9UN1NlbzFrQVRVYndJajRXV21TalhyVE9nOXZ5R21hUDV4NUljRmZ4UlhhNjRmazZaQXpLR0NPQjFHWGJxZGlPdEtSeDdxQnZidDhjNTRGQUx2WS12SUwxS21SWm5xVnV2d3JSV2Z4bkpxR2pzZFQyZHZON2JuMlptTmZobFl4Ym9WX2JzZFVrMEkzNThKWGM4X0JUSTJoUFRtcUpGTjZ5RDdCX1JzdHh5Si1yZC00WTdfcWlCR2d0aEd6c2hXTHVZR3FIN2doYWU1VEhYTExaS3VkWWxwNUpESGowNkRUSXVVcVg4NElDWHJWaWZGTzZUejdoQkFnR1JmNVNlNW1FUzE4Rk9EbXhYOG1ta3Y4OGlKVzFnajE5bEkxM0xZMGRPQjdkVlJwNGZFOWZHSzBuVkJoaTJZdng1c0U3NWI4VkFRZ1VYMnE2bEZqdVU3QXhMbzZRTldqcUFmNTRvZVpKRUpOWG1sVHAxbXhzLVc0WmRkMlJtZ09yQzZtQmJyYWc2dTlmQ0NkdU0ydmFjODAydVJCbFl0dDFHZHZfcENVWlFGdGVSRzJ5ZF82YkkwNGZGeUFwSVllTjQ2MV9aalJjSDhmTEJlellaN28wbFRvRVh4SFV4X0o3QkZ4S0lhUExzU0wxSU50LTJfNnROQkJ1dDNHN05RRHQ2MDBuZ05Od1J3RHUyMVc2TUdSQngzZ1dteVVCc3NtNzZSQUNuRnZyaUEzYkk1YTZUZnFITHZNal91N3Y0dnpYYUdicEZ0NFQtMEV3In0&amp;execution=d0c25c40-85ad-491b-9103-a7a2fe3ab5b5&amp;kc_locale=eu" tabindex="-1">EU</a>
+                                    </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <h1 id="kc-page-title">
+<link rel="stylesheet" href="/auth/resources/h3sd8/login/dpto-general-sin-clave/css/site.min.css">
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/site.min.js"></script>
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/script.js"></script>
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/purify.min.js"></script>
+<script>
+  <!-- ajustes para quitar en esta pagina estilos y ocultar cabecera -->
+  document.documentElement.className='';
+  document.getElementById('kc-header').classList.add('hidden');
+  document.getElementById('kc-header-wrapper').classList.add('hidden');
+</script>
+<input type="hidden" id="Culture" value="ES">
+
+
+
+<header>
+  <div id="navbarid" class="navbar navbar-fixed-top entorno">
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-3"></div>
+        <div class="col-sm-6 logo">
+          <a href="https://www.educacion.navarra.es/" target="_blank">
+            <img alt="Logotipo Gobierno de Navarra" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/img/dpto-logo.png" title="" width="100%">
+          </a>
+        </div>
+        <div class="col-sm-3">
+          <div class="language">
+            <ul>
+              <li class="">
+                <a class="disabled" href="/auth/realms/educacion.navarra.es/login-actions/authenticate?client_id=ateka-pro&amp;tab_id=uHec8SCNuT0&amp;client_data=eyJydSI6Imh0dHBzOi8vYXRla2EubmF2YXJyYS5lcy9hdGVrYS9mZWRlcmF0aW9uL0VkdWNhL3NpZ25pbiIsInJ0IjoiY29kZSIsInN0IjoiQ2ZESjhDRVFyQUxXcEROTXRVMnZCeDJsY1dCXzBWbE10aW5QcG10U3RiclFwcVdxSWw3a29IMno2aHd5ZUpLbFZKR0ZYeWJ2SGloNDRZVkY3MlhEbXduS2xlaTNrclo3c3c5ckU4aVp2MW5Ia0YwOFNFR3hNRFBMMXJJaWQ3MlRrTkpQWEVwdmd2MkJTTUJzZElNWFpSMUhOQWhPU2h4UlRsY2lGNHJQZmpYa2d2QzVFTWJUS1NSSzlCT1Q4N2g5YndJZ1Zzb2tnT0NvbC10QzBKaEFyemItV3VCZGVfWmFyRXlhTVVMRGdIdG5PUzZzc2M2MUdJUE9sc01Ibld3cGxqWmZnRmJGcFc3dGNiUGE5R2VtZWNQMEZkamdLdm9NM1kzczcwUXFNT250Y0RkUEhDWldDTTNfQW55S3oteEM3UzJYa1QxYlFnUFlNQm9GNmo2dEhjWG1LUWVCNEUwaHdDaDJxU2MwUEZJdFhpaGQ0YjRyMEVvOWZydVRDMTd5ZE9UN1NlbzFrQVRVYndJajRXV21TalhyVE9nOXZ5R21hUDV4NUljRmZ4UlhhNjRmazZaQXpLR0NPQjFHWGJxZGlPdEtSeDdxQnZidDhjNTRGQUx2WS12SUwxS21SWm5xVnV2d3JSV2Z4bkpxR2pzZFQyZHZON2JuMlptTmZobFl4Ym9WX2JzZFVrMEkzNThKWGM4X0JUSTJoUFRtcUpGTjZ5RDdCX1JzdHh5Si1yZC00WTdfcWlCR2d0aEd6c2hXTHVZR3FIN2doYWU1VEhYTExaS3VkWWxwNUpESGowNkRUSXVVcVg4NElDWHJWaWZGTzZUejdoQkFnR1JmNVNlNW1FUzE4Rk9EbXhYOG1ta3Y4OGlKVzFnajE5bEkxM0xZMGRPQjdkVlJwNGZFOWZHSzBuVkJoaTJZdng1c0U3NWI4VkFRZ1VYMnE2bEZqdVU3QXhMbzZRTldqcUFmNTRvZVpKRUpOWG1sVHAxbXhzLVc0WmRkMlJtZ09yQzZtQmJyYWc2dTlmQ0NkdU0ydmFjODAydVJCbFl0dDFHZHZfcENVWlFGdGVSRzJ5ZF82YkkwNGZGeUFwSVllTjQ2MV9aalJjSDhmTEJlellaN28wbFRvRVh4SFV4X0o3QkZ4S0lhUExzU0wxSU50LTJfNnROQkJ1dDNHN05RRHQ2MDBuZ05Od1J3RHUyMVc2TUdSQngzZ1dteVVCc3NtNzZSQUNuRnZyaUEzYkk1YTZUZnFITHZNal91N3Y0dnpYYUdicEZ0NFQtMEV3In0&amp;execution=d0c25c40-85ad-491b-9103-a7a2fe3ab5b5&amp;kc_locale=eu">EU</a>
+              </li>
+              <li class="">
+                <a class="active" href="/auth/realms/educacion.navarra.es/login-actions/authenticate?client_id=ateka-pro&amp;tab_id=uHec8SCNuT0&amp;client_data=eyJydSI6Imh0dHBzOi8vYXRla2EubmF2YXJyYS5lcy9hdGVrYS9mZWRlcmF0aW9uL0VkdWNhL3NpZ25pbiIsInJ0IjoiY29kZSIsInN0IjoiQ2ZESjhDRVFyQUxXcEROTXRVMnZCeDJsY1dCXzBWbE10aW5QcG10U3RiclFwcVdxSWw3a29IMno2aHd5ZUpLbFZKR0ZYeWJ2SGloNDRZVkY3MlhEbXduS2xlaTNrclo3c3c5ckU4aVp2MW5Ia0YwOFNFR3hNRFBMMXJJaWQ3MlRrTkpQWEVwdmd2MkJTTUJzZElNWFpSMUhOQWhPU2h4UlRsY2lGNHJQZmpYa2d2QzVFTWJUS1NSSzlCT1Q4N2g5YndJZ1Zzb2tnT0NvbC10QzBKaEFyemItV3VCZGVfWmFyRXlhTVVMRGdIdG5PUzZzc2M2MUdJUE9sc01Ibld3cGxqWmZnRmJGcFc3dGNiUGE5R2VtZWNQMEZkamdLdm9NM1kzczcwUXFNT250Y0RkUEhDWldDTTNfQW55S3oteEM3UzJYa1QxYlFnUFlNQm9GNmo2dEhjWG1LUWVCNEUwaHdDaDJxU2MwUEZJdFhpaGQ0YjRyMEVvOWZydVRDMTd5ZE9UN1NlbzFrQVRVYndJajRXV21TalhyVE9nOXZ5R21hUDV4NUljRmZ4UlhhNjRmazZaQXpLR0NPQjFHWGJxZGlPdEtSeDdxQnZidDhjNTRGQUx2WS12SUwxS21SWm5xVnV2d3JSV2Z4bkpxR2pzZFQyZHZON2JuMlptTmZobFl4Ym9WX2JzZFVrMEkzNThKWGM4X0JUSTJoUFRtcUpGTjZ5RDdCX1JzdHh5Si1yZC00WTdfcWlCR2d0aEd6c2hXTHVZR3FIN2doYWU1VEhYTExaS3VkWWxwNUpESGowNkRUSXVVcVg4NElDWHJWaWZGTzZUejdoQkFnR1JmNVNlNW1FUzE4Rk9EbXhYOG1ta3Y4OGlKVzFnajE5bEkxM0xZMGRPQjdkVlJwNGZFOWZHSzBuVkJoaTJZdng1c0U3NWI4VkFRZ1VYMnE2bEZqdVU3QXhMbzZRTldqcUFmNTRvZVpKRUpOWG1sVHAxbXhzLVc0WmRkMlJtZ09yQzZtQmJyYWc2dTlmQ0NkdU0ydmFjODAydVJCbFl0dDFHZHZfcENVWlFGdGVSRzJ5ZF82YkkwNGZGeUFwSVllTjQ2MV9aalJjSDhmTEJlellaN28wbFRvRVh4SFV4X0o3QkZ4S0lhUExzU0wxSU50LTJfNnROQkJ1dDNHN05RRHQ2MDBuZ05Od1J3RHUyMVc2TUdSQngzZ1dteVVCc3NtNzZSQUNuRnZyaUEzYkk1YTZUZnFITHZNal91N3Y0dnpYYUdicEZ0NFQtMEV3In0&amp;execution=d0c25c40-85ad-491b-9103-a7a2fe3ab5b5&amp;kc_locale=es">ES</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="navtitle">
+    <div class="container">
+      <div class="title">Departamento de Educación</div>
+    </div>
+  </div>
+</header>
+
+</h1>
+      </header>
+      <div id="kc-content">
+        <div id="kc-content-wrapper">
+
+
+
+<link rel="stylesheet" href="/auth/resources/h3sd8/login/dpto-general-sin-clave/css/site.min.css">
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/site.min.js"></script>
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/script.js"></script>
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/purify.min.js"></script>
+<script>
+  <!-- ajustes para quitar en esta pagina estilos y ocultar cabecera -->
+  document.documentElement.className='';
+  document.getElementById('kc-header').classList.add('hidden');
+  document.getElementById('kc-header-wrapper').classList.add('hidden');
+</script>
+<input type="hidden" id="Culture" value="ES">
+
+<div id="avisoEduca" class="alert alert-info hidden container">
+  <h4 class="alert-heading">Avisos Educa</h4>
+  <p id="avisoEducaContent"></p>
+</div>
+<div class="container body-content">
+  <div class="row">
+    <div class="col-sm-12 time">
+      <i class="fa fa-clock-o icontime"></i>
+      <span id="clock">jueves 23 de abril de 2026 0:24 h</span>
+    </div>
+  </div>
+
+  <div class="login-page">
+    <div class="row">
+      <div class="col-xs-12 ">
+        <h2>Acceso con usuario EDUCA
+            <a href="https://drive.google.com/file/d/1Bew6QTJW9JAFXLPl1CgD9VP8mgCfdRBG/view?usp=sharing" target="_blank">
+              <i class="fa fa-question-circle" alt="Ayuda" title="Ayuda"></i>
+            </a>
+        </h2>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-6 ">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="https://sso.educacion.navarra.es/auth/realms/educacion.navarra.es/login-actions/authenticate?session_code=R0T2sb_jaP2l9_S619L9iYT6vnUhbu-0kKAGMWnQ2zk&amp;execution=d0c25c40-85ad-491b-9103-a7a2fe3ab5b5&amp;client_id=ateka-pro&amp;tab_id=uHec8SCNuT0&amp;client_data=eyJydSI6Imh0dHBzOi8vYXRla2EubmF2YXJyYS5lcy9hdGVrYS9mZWRlcmF0aW9uL0VkdWNhL3NpZ25pbiIsInJ0IjoiY29kZSIsInN0IjoiQ2ZESjhDRVFyQUxXcEROTXRVMnZCeDJsY1dCXzBWbE10aW5QcG10U3RiclFwcVdxSWw3a29IMno2aHd5ZUpLbFZKR0ZYeWJ2SGloNDRZVkY3MlhEbXduS2xlaTNrclo3c3c5ckU4aVp2MW5Ia0YwOFNFR3hNRFBMMXJJaWQ3MlRrTkpQWEVwdmd2MkJTTUJzZElNWFpSMUhOQWhPU2h4UlRsY2lGNHJQZmpYa2d2QzVFTWJUS1NSSzlCT1Q4N2g5YndJZ1Zzb2tnT0NvbC10QzBKaEFyemItV3VCZGVfWmFyRXlhTVVMRGdIdG5PUzZzc2M2MUdJUE9sc01Ibld3cGxqWmZnRmJGcFc3dGNiUGE5R2VtZWNQMEZkamdLdm9NM1kzczcwUXFNT250Y0RkUEhDWldDTTNfQW55S3oteEM3UzJYa1QxYlFnUFlNQm9GNmo2dEhjWG1LUWVCNEUwaHdDaDJxU2MwUEZJdFhpaGQ0YjRyMEVvOWZydVRDMTd5ZE9UN1NlbzFrQVRVYndJajRXV21TalhyVE9nOXZ5R21hUDV4NUljRmZ4UlhhNjRmazZaQXpLR0NPQjFHWGJxZGlPdEtSeDdxQnZidDhjNTRGQUx2WS12SUwxS21SWm5xVnV2d3JSV2Z4bkpxR2pzZFQyZHZON2JuMlptTmZobFl4Ym9WX2JzZFVrMEkzNThKWGM4X0JUSTJoUFRtcUpGTjZ5RDdCX1JzdHh5Si1yZC00WTdfcWlCR2d0aEd6c2hXTHVZR3FIN2doYWU1VEhYTExaS3VkWWxwNUpESGowNkRUSXVVcVg4NElDWHJWaWZGTzZUejdoQkFnR1JmNVNlNW1FUzE4Rk9EbXhYOG1ta3Y4OGlKVzFnajE5bEkxM0xZMGRPQjdkVlJwNGZFOWZHSzBuVkJoaTJZdng1c0U3NWI4VkFRZ1VYMnE2bEZqdVU3QXhMbzZRTldqcUFmNTRvZVpKRUpOWG1sVHAxbXhzLVc0WmRkMlJtZ09yQzZtQmJyYWc2dTlmQ0NkdU0ydmFjODAydVJCbFl0dDFHZHZfcENVWlFGdGVSRzJ5ZF82YkkwNGZGeUFwSVllTjQ2MV9aalJjSDhmTEJlellaN28wbFRvRVh4SFV4X0o3QkZ4S0lhUExzU0wxSU50LTJfNnROQkJ1dDNHN05RRHQ2MDBuZ05Od1J3RHUyMVc2TUdSQngzZ1dteVVCc3NtNzZSQUNuRnZyaUEzYkk1YTZUZnFITHZNal91N3Y0dnpYYUdicEZ0NFQtMEV3In0" method="post">
+              <div class="form-group ">
+                <label for="username">Nombre de usuario</label>
+                <input tabindex="1" id="username" class="form-control" name="username" value="" type="text" autofocus="" autocomplete="off">
+              </div>
+              <div class="form-group ">
+                <label for="password">Contraseña</label>
+                <input tabindex="2" id="password" class="form-control" name="password" type="password" autocomplete="off">
+               </div>
+               <div>
+                 <a class="recordarPass" tabindex="4" href="https://educages.navarra.es/Educa/public/trUSRPasswordResetSolicitud">Accedo por primera vez / No recuerdo la contraseña</a>
+               </div>
+               <div>
+                 🔑<a class="recordarPass" tabindex="4" href="/auth/realms/educacion.navarra.es/account/#/security/signingin">Configurar doble factor de seguridad (2FA)</a>
+               </div>
+               <div id="kc-form-buttons" class="botonera">
+                 <input type="hidden" id="id-hidden-input" name="credentialId">
+                 <input tabindex="3" class="btn btn-continue" name="login" id="kc-login" type="submit" value="Iniciar sesión">
+               </div>
+            </form>
+          </div>
+        </div>
+        <div class="lnkAyudaTramitarInet">
+          <a class="ayuda" target="_blank" rel="noopener noreferrer" href="https://www.navarra.es/es/tramites/ayuda-para-tramitar-por-internet">
+            Ayuda para tramitar por internet
+          </a>
+        </div>
+      </div>
+
+      
+      <div class="col-md-6 col-sm-12 text-center" style="padding:0px">
+        <div class="row">
+      
+          <div class="col-xs-12">
+          
+            
+
+            
+          </div>
+          <div class="col-xs-12">
+          
+            
+
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>    
+</div>
+
+
+
+<link rel="stylesheet" href="/auth/resources/h3sd8/login/dpto-general-sin-clave/css/site.min.css">
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/site.min.js"></script>
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/script.js"></script>
+<script type="text/javascript" src="/auth/resources/h3sd8/login/dpto-general-sin-clave/js/purify.min.js"></script>
+<script>
+  <!-- ajustes para quitar en esta pagina estilos y ocultar cabecera -->
+  document.documentElement.className='';
+  document.getElementById('kc-header').classList.add('hidden');
+  document.getElementById('kc-header-wrapper').classList.add('hidden');
+</script>
+<input type="hidden" id="Culture" value="ES">
+
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+</body></html>

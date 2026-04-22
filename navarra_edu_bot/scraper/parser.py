@@ -37,7 +37,7 @@ class SessionExpiredError(RuntimeError):
 #   - Does NOT have .dropdown-user
 
 _DATATABLE_ROWS_SELECTOR = "div.ui-datatable tbody[id$='_data'] > tr[data-ri]"
-_AUTHENTICATED_INDICATOR = "ul.dropdown-user"
+_LOGOUT_LINK = "a[href='/atp/logout.xhtml']"
 _NOT_AUTHENTICATED_INDICATOR = "form#formIndex"
 
 
@@ -45,11 +45,11 @@ def parse_offers(html: str) -> list[Offer]:
     soup = BeautifulSoup(html, "html.parser")
 
     # Detect session expired / not authenticated:
-    # If we see the public index form AND no user dropdown, session is expired.
-    has_user_menu = soup.select_one(_AUTHENTICATED_INDICATOR)
+    # If we see the public index form AND no logout link, session is expired.
+    has_logout = soup.select_one(_LOGOUT_LINK)
     has_index_form = soup.select_one(_NOT_AUTHENTICATED_INDICATOR)
 
-    if has_index_form and not has_user_menu:
+    if has_index_form and not has_logout:
         raise SessionExpiredError("Session expired: login form detected, no user menu")
 
     rows = soup.select(_DATATABLE_ROWS_SELECTOR)
