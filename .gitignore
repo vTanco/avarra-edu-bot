@@ -8,7 +8,6 @@ htmlcov/
 *.db
 *.log
 .DS_Store
-config.yaml
 !config.example.yaml
 
 .env
