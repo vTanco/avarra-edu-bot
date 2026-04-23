@@ -20,8 +20,9 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 # Instalar navegadores de Playwright (solo Chromium para ahorrar espacio)
 RUN playwright install --with-deps chromium
 
-# Copiar el código fuente
+# Copiar el código fuente y el archivo de configuración por defecto
 COPY navarra_edu_bot/ ./navarra_edu_bot/
+COPY config.yaml ./
 
 # Establecer PYTHONPATH
 ENV PYTHONPATH=/app
