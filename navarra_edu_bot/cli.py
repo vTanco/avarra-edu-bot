@@ -5,10 +5,8 @@ import click
 
 
 def _keychain_read(account: str) -> str:
-    return subprocess.check_output(
-        ["security", "find-generic-password", "-s", "navarra-edu-bot", "-a", account, "-w"],
-        text=True,
-    ).strip()
+    from navarra_edu_bot.config.keychain import read_secret
+    return read_secret(account)
 
 
 @click.group()
