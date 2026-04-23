@@ -1,0 +1,684 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es"><head><script type="text/javascript" async="" src="https://www.googletagmanager.com/gtag/js?id=G-Y55SL8EZ40&amp;cx=c&amp;_slc=1"></script><script async="" src="https://www.google-analytics.com/analytics.js"></script><script type="text/javascript" src="/atp/javax.faces.resource/jquery/jquery.js.xhtml?ln=primefaces&amp;v=5.2"></script><script type="text/javascript" src="/atp/javax.faces.resource/jquery/jquery-plugins.js.xhtml?ln=primefaces&amp;v=5.2"></script><script type="text/javascript" src="/atp/javax.faces.resource/primefaces.js.xhtml?ln=primefaces&amp;v=5.2"></script><link type="text/css" rel="stylesheet" href="/atp/javax.faces.resource/primefaces.css.xhtml?ln=primefaces&amp;v=5.2"><script type="text/javascript" src="/atp/javax.faces.resource/jsf.js.xhtml?ln=javax.faces"></script><script type="text/javascript">if(window.PrimeFaces){}</script>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Language" content="Spanish">
+    <meta name="Content-Language" content="Spanish">
+    <meta name="Keywords" content="ATP, Adjudicación Telemática de Plazas">
+    <meta name="Description" content="Contratación temporal de personal docente: Adjudicación telemática de plazas (ATP)">
+    <meta name="Owner" content="Gobierno de Navarra">
+    
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/app.css">
+    <link rel="stylesheet" type="text/css" href="/atp/resources/theme/2_3/css/font-awesome.min.css">       <!--[if lt IE 9]>                  <script type="text/javascript" src="/atp/resources/theme/2_3/js/html5shiv.min.js"></script>                  <script type="text/javascript" src="/atp/resources/theme/2_3/js/respond.min.js"></script>       <![endif]-->
+
+	<title>Adjudicación Telemática de Plazas (ATP)</title>
+    
+    <script type="text/javascript">
+      function validarSolicitud() {
+        if ($('#misOfertasDtId tbody tr:first.ui-datatable-empty-message').length > 0) {
+          var alert = $('#solicitudMsgTemp');
+          alert.removeClass('hide');
+          alert.fadeTo(5000, 500).slideUp(500, function(){alert.hide();});
+          return false;
+        }
+        $('#presentarAuxBtn').trigger('click'); return false;
+      }
+
+      function onRowSelect() {
+        $('#misOfertasDtId tr.ui-expanded-row-content').each(function() {
+    	  if ($(this).closest('tr').prev().hasClass('ui-state-highlight')) {
+    	    $(this).css('background-color', '#ffffed');
+    	  } else {
+    	    $(this).css('background-color', '#ededed');
+          }
+    	  if ($(this).closest('tr').prev().hasClass('filaNoActiva')) {
+    	    $(this).addClass('filaNoActiva');
+    	  } else {
+    	    $(this).removeClass('filaNoActiva');
+    	  }
+    	});
+      }
+      
+      $(document).ready(function() {
+        var presentarSolicitudBtn = $('#presentarSolicitudBtn');
+        if (presentarSolicitudBtn.length > 0) { // solo si es una nueva convocatoria
+          $('#misOfertasDtToolbar').affix({
+    	    offset: {
+              top: $("#topnavbar").outerHeight(true) + $('#formSolicitudDatosPersonales').outerHeight(true)
+            }
+          });
+        }
+    	  
+        $('#ofertasDisponiblesDialog').on('show.bs.modal', function(){
+    	  $('body').css('overflow', 'hidden');
+    	  $('#ofertasDisponiblesFormId .modal-body').css('max-height', $(window).height() - 80);
+          var lista = $('#i130\\:inpLista').val();
+          var localidad = $('#i100\\:inpLocalidad').val();
+          var centro = $('#i110\\:inpCentro').val();
+          var tipoOferta = $('#i120\\:inpTipoOferta').val();
+          var tipoJornada = $('#i140\\:inpTipoJornada').val();
+          var idOfertaGCD = $('#i150\\:inpIdOfertaGCD').val();
+          if (lista || localidad || centro || tipoOferta || tipoJornada || idOfertaGCD) {
+            $('#filtersCollapse').collapse('show');
+          }
+          $('#ofertasDisponiblesFormId').on('keydown', function(e) {
+            if (e.which == 13) {
+              e.preventDefault();
+              $('#searchButton').click();
+            }
+          });
+        }).on('hide.bs.modal', function(){
+    	  $('body').css('overflow', 'auto');
+    	});
+
+        $('#misOfertasDtToolbar').css('top', $("#topnavbar").height());
+        
+        GN.EDU.rrhh.lw.table.initPaginatorStyle();
+      });
+    </script>
+    <style>
+      #misOfertasDtToolbar.affix {
+        top: 70px;
+        z-index: 500;
+        /*width: 250px;*/
+        border: 2px solid #ccc;
+        padding: 10px;
+        background-color: #fff;
+      }
+      .modal .modal-body {
+        overflow-y: auto;
+      }
+      body { padding-right: 0 !important }
+      #anadirDlgMessage {
+        position: absolute;
+        z-index: 10000;
+        width: 95%;
+        top: -20px;
+      }
+      dl { margin-bottom:0px; }
+      #ofertasDisponiblesDtId .ui-datatable-odd { background-color: #f6f6f6; }
+      .ui-expanded-row-content {display: table-row;}
+    </style>
+	
+	<script type="text/javascript">
+    if (window.jQuery) {
+      $(document).ready(function() {
+        GN.EDU.rrhh.lw.button.loading.init();
+        GN.EDU.rrhh.lw.button.activeToggle();
+        GN.EDU.rrhh.lw.button.loadTooltips();
+      });
+	}
+
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+   
+    ga('create', 'UA-97221084-1', 'auto');
+    ga('send', 'pageview');
+    </script></head><body style="">
+    <div id="wrapper">
+    
+      <nav id="topnavbar" class="navbar navbar-default navbar-fixed-top" style="background-color:#fff;">
+        <map title="navegación primer nivel del portal" id="menuEspecial" class="hidden-xs">
+          <ul>
+            <li class="logo">
+              <a href="//www.navarra.es/home_es/">
+                <i class="sprite sprite-logo-navarra-es-p"></i>
+                <span>navarra.es</span>
+                &nbsp;<i class="fa fa-flask fa-2x" style="color:red; display:none;">PRO</i>
+              </a>
+            </li>
+            <li class="primero"><a href="//www.navarra.es/home_es/Navarra/">Navarra</a></li>
+            <li class="on"><a href="//www.navarra.es/home_es/Servicios/">Trámites</a></li>
+            <li><a href="//www.navarra.es/home_es/Temas/">Temas</a></li>
+            <li><a href="//www.navarra.es/home_es/Gobierno+de+Navarra/">Gobierno</a></li>
+            <li><a href="//www.navarra.es/home_es/Actualidad/">Actualidad</a></li>
+          </ul>
+        </map>
+
+        <div class="navbar-header">
+          <a href="/atp/index.jsp" class="navbar-brand sprite sprite-logo-cab-edu" title="Nafarroako Gobernua / Gobierno de Navarra"></a>
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Desplegar navegación</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button><a href="/atp/help_es.xhtml" class="navbar-brand" title="Ayuda">
+                  <i class="fa fa-question-circle"></i> Ayuda</a>
+        </div>
+<form id="idiomasForm" name="idiomasForm" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="idiomasForm" value="idiomasForm">
+
+          <div id="navbar" class="navbar-collapse collapse">
+
+            <ul class="nav navbar-nav navbar-right" style="padding-right:10px;">
+              <li class="idiomaActivo"><a id="idiomacastellano" href="#" onclick="mojarra.jsfcljs(document.getElementById('idiomasForm'),{'idiomacastellano':'idiomacastellano','lang':'es_ES','convid':'1204'},'');return false">Castellano</a>
+              </li>
+              <li class="idiomaNormal"><a id="idiomaeuskara" href="#" onclick="mojarra.jsfcljs(document.getElementById('idiomasForm'),{'idiomaeuskara':'idiomaeuskara','lang':'eu_ES','convid':'1204'},'');return false">Euskara</a>
+              </li>
+              <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#" aria-expanded="false" role="button">
+                  <i class="fa fa-user"></i> Vicente Tanco Aguas
+                  <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu dropdown-user">
+                  <li><a href="/atp/auth/areapersonal.xhtml">
+                    <i class="fa fa-lock"></i> Mi ATP</a>
+                  </li>
+                  <li><a href="/atp/logout.xhtml">
+                    <i class="fa fa-sign-out"></i> Salir</a>
+                  </li>
+                </ul>
+              </li>
+              
+            </ul>
+          </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+      </nav>
+      
+      <div id="page-content-wrapper" class="container-fluid">
+        <div style="margin-top: 15px"></div>
+        <ul class="breadcrumb  hidden-xs">
+          <li><a id="goHome" href="/atp/index.jsp" title="Ir al inicio" style="text-decoration:none;" class="fa fa-home fa-2x"></a></li>
+    <li><a href="/atp/convocatoria/ficha.xhtml?convid=1204">Convocatoria</a></li>
+    <li><a href="/atp/private/missolicitudes.xhtml?convid=1204">Mis solicitudes</a></li>
+    <li class="active">Solicitud</li>
+        </ul>
+        
+        <noscript>
+          <div class="alert alert-danger">
+            <i class="fa fa-alert fa-2x"></i>
+            <h2>JavaScript no está habilitado.</h2>
+            <h3><a href="http://enable-javascript.com/es/" target="_blank" rel="noopener noreferrer">Habilite JavaScript</a> para una correcta experiencia de usuario.</h3>
+          </div>
+	    </noscript>
+<form id="formSolicitudDatosPersonales" name="formSolicitudDatosPersonales" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formSolicitudDatosPersonales" value="formSolicitudDatosPersonales">
+
+        <div class="row">
+          <div class="col-xs-12 col-sm-7">
+            <ul class="pager" style="margin:5px; text-align:left;">
+              <li class="previous hidden-xs"><a href="/atp/private/missolicitudes.xhtml?convid=1204" style="color:#777;">
+                  <i class="fa fa-long-arrow-left">Volver a mis solicitudes</i></a>
+              </li>
+              <h3 style="margin-top:0px;">
+                &nbsp;&nbsp;Convocatoria 69/2026 - 
+                Nueva solicitud
+              </h3>
+             </ul>
+          </div>
+          <div class="col-xs-12 col-sm-5">
+            <div class="btn-group btn-group-justified"><a id="guardarBorradorBtn" href="#" class="ui-commandlink ui-widget btn btn-default" aria-label="Guardar borrador" onclick="PrimeFaces.ab({s:&quot;guardarBorradorBtn&quot;,u:&quot;solicitudMsg&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){GN.EDU.rrhh.lw.popup.loading.hide(); GN.EDU.rrhh.lw.message.fadeOut('solicitudMsg');;}});return false;" title="Guardar borrador">
+                <i class="fa fa-save"></i>
+                Guardar borrador
+              </a><a id="presentarSolicitudBtn" href="#" class="ui-commandlink ui-widget btn btn-success" onclick="return validarSolicitud();;PrimeFaces.ab({s:&quot;presentarSolicitudBtn&quot;,p:&quot;formSolicitudDatosPersonales formSolicitud&quot;});return false;">
+                <i class="fa fa-gavel"></i>
+                Presentar solicitud
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <div id="pageInfo1" class="panel panel-default pageinfo">
+          <a href="#" class="close" style="margin-right: 5px;" data-target="#pageInfo1" data-dismiss="alert" aria-label="close">×</a>
+          <div class="panel-body" style="padding:5px;">
+            <p>
+                <i class="fa fa-info-circle fa-2x"></i>&nbsp;Compruebe que el correo electrónico y el teléfono móvil son correctos. Pulse sobre el botón "Elegir ofertas" para incluir las ofertas en su solicitud y ordénelas según su preferencia. Para reordenar una oferta, selecciónela primero pulsando sobre ella y utilice las flechas <i class="fa fa-arrow-up"></i> y <i class="fa fa-arrow-down"></i>.
+                Pulse sobre el botón "Guardar borrador" para guardar un borrador de su solicitud. Cuando tenga las ofertas ordenadas, pulse sobre el botón "Presentar solicitud" para finalizar.
+              
+            </p>
+          </div>
+        </div><div id="solicitudMsg"></div>
+      <div id="solicitudMsgTemp" class="alert alert-danger hide">
+        <ul style="list-style:none; padding-left:0px;"><li><i class="fa fa-times-circle">&nbsp;</i><strong>No ha incluido ninguna oferta en su solicitud. No puede presentar una solicitud vacía.</strong></li></ul>
+      </div>
+
+      <fieldset>
+      <div class="row">
+        <div class="col-sm-5">
+          <div class="form-group">
+            <label>Nombre y apellidos</label>
+            <div style="height:100%; padding:6px 12px 6px 0px; font-size:14px; line-height:1.42857143;">Vicente Tanco Aguas - 73419409M</div>
+          </div>
+        </div>
+        <div class="col-sm-2">
+          <div class="form-group">
+            <label>Perfiles</label>
+            <div style="height:100%; padding:6px 12px 6px 0px; font-size: 14px; line-height: 1.42857143;">I, PI&nbsp;</div>
+          </div>
+        </div>
+        <div class="col-sm-3">
+    <div class="form-group">
+      <label for="i10:inpEmail">Correo electrónico *</label>
+        <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Este correo electrónico se utilizará para notificar la adjudicación y la disponibilidad del contrato para firmar."></i><input id="i10:inpEmail" name="i10:inpEmail" type="text" value="vicente.tanco@edu.uah.es" autocomplete="off" maxlength="100" placeholder="" style="background-color:#ffc;" aria-required="true" class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all form-control" role="textbox" aria-disabled="false" aria-readonly="false">
+    </div>                
+        </div>
+        <div class="col-sm-2">
+    <div class="form-group">
+      <label for="i20:inpTfno1">Teléfono móvil *</label>
+        <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Este teléfono móvil se utilizará para notificar la adjudicación y la disponibilidad del contrato para firmar."></i><input id="i20:inpTfno1" name="i20:inpTfno1" type="text" value="681864143" autocomplete="off" maxlength="100" placeholder="" style="background-color:#ffc;" aria-required="true" class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all form-control" role="textbox" aria-disabled="false" aria-readonly="false">
+    </div>
+        </div>
+      </div>
+      </fieldset>
+      
+      <fieldset class="white" style="overflow-x:auto;"><table class="table table-condensed">
+<thead>
+<tr>
+<th scope="col">Lista de la oferta</th>
+<th scope="col">Lista por la que está convocado/a</th>
+<th scope="col">Tipo de participación
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="&lt;u&gt;Obligatoria&lt;/u&gt;: La participación es obligatoria excepto para las plazas de petición voluntaria (artículo 16.2 de la Orden Foral 37/2020). &lt;br/&gt; &lt;u&gt;Voluntaria&lt;/u&gt;: Al aspirante no se le pondrá no disponible por no haber elegido alguna plaza."></i></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0590/INSTALACIONES ELECTROTÉCNICAS/C</td>
+<td>
+            0590/EQUIPOS ELECTRÓNICOS/C
+          </td>
+<td>
+            Voluntaria
+          </td>
+</tr>
+<tr>
+<td>0590/ORGANIZACIÓN Y PROYECTOS DE FABRICACIÓN MECÁNICA/C</td>
+<td>
+            0590/ORGANIZACIÓN Y PROYECTOS DE FABRICACIÓN MECÁNICA/C
+          </td>
+<td>
+            Voluntaria
+          </td>
+</tr>
+</tbody>
+</table>
+
+      </fieldset><button id="presentarAuxBtn" name="presentarAuxBtn" class=" hide" onclick="PrimeFaces.ab({s:&quot;presentarAuxBtn&quot;,p:&quot;formSolicitudDatosPersonales formSolicitud&quot;,u:&quot;solicitudMsg presentarResumen&quot;,onco:function(xhr,status,args){GN.EDU.rrhh.lw.message.fadeOut('solicitudMsg'); if (args &amp;&amp; !args.validationFailed) { $('#presentarDlg').modal('show');};}});return false;" type="submit" role="button" aria-disabled="false"><span class="ui-button-text ui-c">ui-button</span></button>
+      
+      <div id="presentarDlg" class="modal fade" tabindex="-1" role="dialog" data-keyboard="false" data-backdrop="static">
+        <div class="modal-dialog">     
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </button>
+              <h4 class="modal-title">Presentar solicitud</h4>
+            </div>
+            <div class="modal-body">
+              <div class="panel panel-default pageinfo">
+                <div class="panel-body" style="padding:5px;">
+                  <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Está a punto de presentar su solicitud. Este proceso puede tardar. Cuando haya terminado, podrá consultar (descargar) su solicitud en la Carpeta ciudadana, Registro general electrónico o desde "Mis solicitudes".</p>
+                </div>
+              </div><span id="presentarResumen" class="row">
+                <dl class="dl-horizontal">
+                  <dt>Correo electrónico</dt>
+                  <dd>vicente.tanco@edu.uah.es</dd>
+                  <dt>Teléfono móvil</dt>
+                  <dd>681864143</dd>
+                  <dt style="white-space: normal;">Total ofertas elegidas</dt>
+                  <dd>0</dd>
+                </dl></span>
+              
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="presentarDlgCancelBtn" class="btn btn-default" data-dismiss="modal">Cancelar</button><button id="doSaveSolicitudBtn" name="doSaveSolicitudBtn" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only btn btn-primary" onclick="PrimeFaces.ab({s:&quot;doSaveSolicitudBtn&quot;,p:&quot;formSolicitudDatosPersonales&quot;,u:&quot;solicitudMsg&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){$('#presentarDlg').modal('hide');                               GN.EDU.rrhh.lw.popup.loading.hide();                               GN.EDU.rrhh.lw.message.fadeOut('solicitudMsg');;}});return false;" type="submit" role="button" aria-disabled="false"><span class="ui-button-text ui-c">Presentar solicitud</span></button>
+            </div>
+          </div>
+        </div>
+      </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+<form id="formSolicitud" name="formSolicitud" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formSolicitud" value="formSolicitud">
+
+      <fieldset style="margin-bottom:0px;">
+      <div id="misOfertasDtToolbar" class="row affix-top" style="top: 82px;">
+        <div class="col-xs-9">
+          <div class="btn-toolbar">
+            <div class="btn-group" role="group"><a id="upButton" href="#" class="ui-commandlink ui-widget btn btn-default" aria-label="Mover una posición arriba la oferta seleccionada." onclick="PrimeFaces.ab({s:&quot;upButton&quot;,p:&quot;formSolicitud&quot;,u:&quot;misOfertasDtId&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){GN.EDU.rrhh.lw.table.initPaginatorStyle(); GN.EDU.rrhh.lw.popup.loading.hide();;}});return false;" title="Mover una posición arriba la oferta seleccionada.">
+                <i class="fa fa-arrow-up"></i></a><a id="downButton" href="#" class="ui-commandlink ui-widget btn btn-default" aria-label="Mover una posición abajo la oferta seleccionada." onclick="PrimeFaces.ab({s:&quot;downButton&quot;,p:&quot;formSolicitud&quot;,u:&quot;misOfertasDtId&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){GN.EDU.rrhh.lw.table.initPaginatorStyle(); GN.EDU.rrhh.lw.popup.loading.hide();;}});return false;" title="Mover una posición abajo la oferta seleccionada.">
+                <i class="fa fa-arrow-down"></i></a><a id="reOrderButton" href="#" class="ui-commandlink ui-widget btn btn-default" aria-label="Mover oferta a otra posición." onclick="PrimeFaces.ab({s:&quot;reOrderButton&quot;,u:&quot;confirmReordenarDialogForm&quot;,onco:function(xhr,status,args){if (PF('misOfertasDtVar').getSelectedRowsCount() == 1) {$('#confirmReordenarDialog').modal('show');};}});return false;" title="Mover oferta a otra posición.">
+                <i class="fa fa-arrows"></i></a>
+            </div>
+            <div class="btn-group" role="group"><a id="deleteButton" href="#" class="ui-commandlink ui-widget btn btn-default" aria-label="Quitar de la solicitud la oferta seleccionada." onclick="PrimeFaces.ab({s:&quot;deleteButton&quot;,u:&quot;confirmDeleteDialogForm&quot;,onco:function(xhr,status,args){if (PF('misOfertasDtVar').getSelectedRowsCount() &gt; 0) {$('#confirmDeleteDialog').modal('show');};}});return false;" title="Quitar de la solicitud la oferta seleccionada.">
+                <i class="fa fa-trash-o"></i></a>
+            </div>
+            <div class="btn-group" role="group"><a id="exportCsvAux1" href="#" style="margin-left:-1px;" title="Exportar a CSV." onclick="mojarra.jsfcljs(document.getElementById('formSolicitud'),{'exportCsvAux1':'exportCsvAux1','tableId':'misOfertasDtId'},'');return false" class="btn btn-default">
+                  <i class="fa fa-file-text-o"></i></a>
+              </div>
+            <div class="btn-group" role="group">
+              <div class="btn">Total ofertas elegidas
+                <span class="badge"><span id="totalOfertasElegidas">0</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-3"><a id="elegirOfertasBtn" href="#" class="ui-commandlink ui-widget btn btn-primary pull-right" aria-label="Pulse para ver las ofertas disponibles y añadirlas a su solicitud." onclick="PrimeFaces.ab({s:&quot;elegirOfertasBtn&quot;,u:&quot;ofertasDisponiblesFormId&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show(); $('#anadirDlgMessage').hide(); return true;;},onco:function(xhr,status,args){$('#ofertasDisponiblesDialog').modal('show'); GN.EDU.rrhh.lw.table.initPaginatorStyle(); GN.EDU.rrhh.lw.popup.loading.hide();;}});return false;" title="Pulse para ver las ofertas disponibles y añadirlas a su solicitud.">
+            <i class="fa fa-search-plus"></i>
+            Elegir ofertas
+          </a>
+        </div>
+      </div>
+      </fieldset>
+    
+      <div style="overflow-x:auto;">
+      <fieldset style="padding-top: 0px;">
+      <div class="row">
+        <div class="col-xs-12"><div id="misOfertasDtId" class="ui-datatable ui-widget"><div class="ui-datatable-tablewrapper"><table role="grid" class="table table-condensed"><thead id="misOfertasDtId_head"><tr role="row"><th id="misOfertasDtId:j_idt120" class="ui-state-default" role="columnheader" style="width:1px"><span class="ui-column-title"></span></th><th id="misOfertasDtId:j_idt124" class="ui-state-default" role="columnheader" style="width:15px"><span class="ui-column-title">Pos.</span></th><th id="misOfertasDtId:cIdOfertaGCD" class="ui-state-default" role="columnheader" style="width:15px"><span class="ui-column-title">Id.</span></th><th id="misOfertasDtId:cListaBaseNombre" class="ui-state-default" role="columnheader" style="width:150px"><span class="ui-column-title">Lista
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Cuerpo / Especialidad / Idioma [C = Castellano, E = Euskara]"></i></span></th><th id="misOfertasDtId:cLocalidad" class="ui-state-default" role="columnheader" style="width:50px"><span class="ui-column-title">Localidad</span></th><th id="misOfertasDtId:cCentro" class="ui-state-default" role="columnheader" style="width:200px"><span class="ui-column-title">Centro</span></th><th id="misOfertasDtId:cTipoOferta" class="ui-state-default" role="columnheader" style="width:50px"><span class="ui-column-title">Tipo oferta
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="N (Necesidad) o S (Sustitución)"></i></span></th><th id="misOfertasDtId:cPerfiles" class="ui-state-default" role="columnheader" style="width:50px"><span class="ui-column-title">Perfiles</span></th><th id="misOfertasDtId:cTipoJornada" class="ui-state-default" role="columnheader" style="width:120px"><span class="ui-column-title">Jornada (horas lectivas)</span></th><th id="misOfertasDtId:cEsItinerante" class="ui-state-default" role="columnheader" style="width:50px"><span class="ui-column-title">Itin.
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Puede consultar más información sobre las itinerancias en las observaciones de la oferta."></i></span></th><th id="misOfertasDtId:cHabilidades" class="ui-state-default" role="columnheader" style="width:50px"><span class="ui-column-title">Hab.
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Puede consultar más información sobre las habilidades en las observaciones de la oferta."></i></span></th></tr></thead><tbody id="misOfertasDtId_data" class="ui-datatable-data ui-widget-content"><tr class="ui-widget-content ui-datatable-empty-message"><td colspan="11">No ha incluido ninguna oferta en su solicitud. Pulse sobre el botón "Elegir ofertas".</td></tr></tbody></table></div><input type="hidden" id="misOfertasDtId_selection" name="misOfertasDtId_selection" autocomplete="off" value=""></div>
+        </div>
+      </div>
+      
+      </fieldset>
+      </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+    
+    
+    
+    <div id="ofertasDisponiblesDialog" class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog">
+<form id="ofertasDisponiblesFormId" name="ofertasDisponiblesFormId" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="ofertasDisponiblesFormId" value="ofertasDisponiblesFormId">
+
+      
+      <div class="modal-dialog modal-lg" style="width: 95%;">
+        <div class="modal-content">
+          <div class="modal-header" style="padding:10px;">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="font-size: 4em;line-height: 0.6em;" title="Cerrar">
+              <span aria-hidden="true">×</span>
+            </button>
+            <h4 class="modal-title">Añadir ofertas a mi solicitud</h4><div id="anadirDlgMessage"></div>
+          </div>
+          <div class="modal-body" style="padding-top:0px;">
+          
+          <div id="pageInfo3" class="panel panel-default pageinfo">
+            <a href="#" class="close" style="margin-right: 5px;" data-target="#pageInfo3" data-dismiss="alert" aria-label="close">×</a>
+            <div class="panel-body" style="padding:5px;">
+              <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Para añadir una oferta a su solicitud pulse sobre el botón <i class="fa fa-plus"></i>. Si desea añadir todas las ofertas, pulse sobre el botón "Añadir todas".
+              Las ofertas se incluyen a la solicitud en el orden en el que las añade. Recuerde que luego puede reordenar las ofertas desde la solicitud.
+              Pulse sobre el icono <i class="fa fa-angle-down"></i> para obtener más información de cada oferta.</p>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:5px;">
+            <div class="col-xs-12">
+              <div class="btn-group" role="group" aria-label="toolbar">
+                <button type="button" class="btn btn-default active-toggle" data-toggle="collapse" aria-haspopup="true" aria-expanded="false" href="#filtersCollapse" title="Ocultar/Mostrar filtros de búsqueda.">
+                  <i class="fa fa-search"></i>
+                </button><a id="exportCsvAux2" href="#" style="margin-left:-1px;" title="Exportar a CSV." onclick="mojarra.jsfcljs(document.getElementById('ofertasDisponiblesFormId'),{'exportCsvAux2':'exportCsvAux2','tableId':'ofertasDisponiblesDtId'},'');return false" class="btn btn-default">
+                  <i class="fa fa-file-text-o"></i></a>                
+              </div>
+
+              <button id="anadirTodasShowConfirmBtn" type="button" class="btn btn-primary pull-right" onclick="$('#totalAnadirCount').text(PrimeFaces.widgets.ofertasDisponiblesDtVar.paginator.cfg.rowCount); $('#confirmAnadirTodasDialog').modal('show');">
+                <i class="fa fa-th"></i> Añadir todas
+              </button>
+              
+            </div>
+          </div>
+      
+          <div class="row">
+            <div class="col-xs-12">
+              <div id="filtersCollapse" class="panel-collapse collapse">
+                <div class="panel panel-default">
+                  <div class="panel-body"><div id="filtersClean">
+                      <div class="row">
+                      <div class="col-xs-12 col-sm-6 col-md-4">
+    <div class="form-group">
+      <label for="i130:inpLista">Lista </label><select id="i130:inpLista" name="i130:inpLista" class="form-control" size="1" style="text-overflow:ellipsis;                        ">	<option value="" selected="selected"></option>
+</select>
+    </div>
+                        </div>
+                        <div class="col-xs-12 col-sm-6 col-md-4">
+    <div class="form-group">
+      <label for="i100:inpLocalidad">Localidad </label>
+        <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Si selecciona una localidad de zona, solo se mostrarán aquellas ofertas que pertenezcan a esa zona y no las ofertas de las localidades que componen dicha zona."></i><select id="i100:inpLocalidad" name="i100:inpLocalidad" class="form-control" size="1" style="text-overflow:ellipsis;                        " onchange="mojarra.ab(this,event,'valueChange',0,'i110:inpCentro')">	<option value="" selected="selected"></option>
+</select>
+    </div>
+                        </div>
+                        <div class="col-xs-12 col-sm-6 col-md-4">
+    <div class="form-group">
+      <label for="i110:inpCentro">Centro </label><select id="i110:inpCentro" name="i110:inpCentro" class="form-control" size="1" style="text-overflow:ellipsis;                        ">	<option value="" selected="selected"></option>
+</select>
+    </div>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-xs-12 col-sm-6 col-md-4">
+    <div class="form-group">
+      <label for="i120:inpTipoOferta">Tipo oferta </label><select id="i120:inpTipoOferta" name="i120:inpTipoOferta" class="form-control" size="1" style="text-overflow:ellipsis;                        ">	<option value="" selected="selected"></option>
+</select>
+    </div>
+                        </div>
+                        <div class="col-xs-12 col-sm-6 col-md-4">
+    <div class="form-group">
+      <label for="i140:inpTipoJornada">Tipo jornada </label><select id="i140:inpTipoJornada" name="i140:inpTipoJornada" class="form-control" size="1" style="text-overflow:ellipsis;                        ">	<option value="" selected="selected"></option>
+</select>
+    </div>
+                        </div>
+                        <div class="col-xs-12 col-sm-4 col-md-2">
+    <div class="form-group">
+      <label for="i150:inpIdOfertaGCD">Id. </label><input id="i150:inpIdOfertaGCD" name="i150:inpIdOfertaGCD" type="text" autocomplete="off" maxlength="10" placeholder="" style="" class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all form-control" role="textbox" aria-disabled="false" aria-readonly="false">
+    </div>
+                        </div>
+                      </div></div>
+                  
+                    <div class="row">
+                      <div class="col-xs-12">
+                        <div class="pull-right"><a id="j_idt221" href="#" title="Pulse para limpiar los filtros de búsqueda." onclick="PrimeFaces.ab({s:this,e:&quot;action&quot;,f:&quot;ofertasDisponiblesFormId&quot;,p:&quot;j_idt221&quot;,u:&quot;i100:inpLocalidad i110:inpCentro i120:inpTipoOferta i130:inpLista i140:inpTipoJornada i150:inpIdOfertaGCD&quot;});;return false" class="btn btn-default">
+                            Limpiar
+                            </a><a id="searchButton" href="#" title="Pulse para realizar una búsqueda." onclick="PrimeFaces.ab({s:this,e:&quot;action&quot;,f:&quot;ofertasDisponiblesFormId&quot;,p:&quot;ofertasDisponiblesFormId&quot;,u:&quot;ofertasDisponiblesDtId&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){GN.EDU.rrhh.lw.popup.loading.hide(); GN.EDU.rrhh.lw.button.loadTooltips(); GN.EDU.rrhh.lw.table.initPaginatorStyle();;}});;return false" class="btn btn-primary loadingSpinner">
+                            Buscar
+                            </a>
+                        </div>                    
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="row">
+            <div class="col-xs-12"><div id="ofertasDisponiblesDtId" class="ui-datatable ui-widget"><div class="ui-datatable-tablewrapper"><table role="grid" class="table table-condensed"><thead id="ofertasDisponiblesDtId_head"><tr role="row"><th id="ofertasDisponiblesDtId:cAddBtn" class="ui-state-default" role="columnheader" style="width:5px"><span class="ui-column-title"></span></th><th id="ofertasDisponiblesDtId:cIdOfertaGCD" class="ui-state-default ui-sortable-column" role="columnheader" style="width:15px" tabindex="0"><span class="ui-column-title">Id.</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cListaBaseNombre" class="ui-state-default ui-sortable-column" role="columnheader" style="width:150px" tabindex="0"><span class="ui-column-title">Lista
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Cuerpo / Especialidad / Idioma [C = Castellano, E = Euskara]"></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cLocalidad" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Localidad</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cCentro" class="ui-state-default ui-sortable-column" role="columnheader" style="width:200px" tabindex="0"><span class="ui-column-title">Centro</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cTipoOferta" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Tipo oferta
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="N (Necesidad) o S (Sustitución)"></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cPerfiles" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Perfiles</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cTipoJornada" class="ui-state-default ui-sortable-column" role="columnheader" style="width:120px" tabindex="0"><span class="ui-column-title">Jornada (horas lectivas)</span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cEsItinerante" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Itin.
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Puede consultar más información sobre las itinerancias en las observaciones de la oferta."></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th><th id="ofertasDisponiblesDtId:cHabilidades" class="ui-state-default ui-sortable-column" role="columnheader" style="width:50px" tabindex="0"><span class="ui-column-title">Hab.
+              <i class="fa fa-question-circle showtooltip" title="" data-toggle="tooltip" data-placement="bottom" data-html="true" data-original-title="Puede consultar más información sobre las habilidades en las observaciones de la oferta."></i></span><span class="ui-sortable-column-icon ui-icon ui-icon-carat-2-n-s"></span></th></tr></thead><tbody id="ofertasDisponiblesDtId_data" class="ui-datatable-data ui-widget-content"><tr class="ui-widget-content ui-datatable-empty-message"><td colspan="10">Con los filtros seleccionados no hay más ofertas para añadir a la solicitud.</td></tr></tbody></table></div></div> 
+            </div>
+          </div>
+        </div>
+        
+        </div>
+      </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+    </div>
+    
+    <div id="confirmDeleteDialog" class="modal fade" tabindex="-1" role="dialog" data-keyboard="false" data-backdrop="static">
+<form id="confirmDeleteDialogForm" name="confirmDeleteDialogForm" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="confirmDeleteDialogForm" value="confirmDeleteDialogForm">
+
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </button>
+              <h4 class="modal-title">
+                <i class="fa fa-trash-o fa-2x"></i>
+              </h4>
+            </div>
+            <div class="modal-body">
+              <div class="panel panel-default pageinfo">
+                <div class="panel-body" style="padding:5px;">
+                  <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Las ofertas desaparecerán de su solicitud pero puede volver a elegirlas desde el botón "Elegir Ofertas"</p>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="confirmDeleteDialogCancelBtn" class="btn btn-default" data-dismiss="modal">Cancelar</button><a id="confirmDeleteDialogOkBtn" href="#" class="ui-commandlink ui-widget btn btn-primary" onclick="PrimeFaces.ab({s:&quot;confirmDeleteDialogOkBtn&quot;,p:&quot;confirmDeleteDialogForm&quot;,u:&quot;ofertasDisponiblesDtId misOfertasDtId solicitudMsg totalOfertasElegidas&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){GN.EDU.rrhh.lw.table.initPaginatorStyle(); $('#confirmDeleteDialog').modal('hide'); GN.EDU.rrhh.lw.popup.loading.hide(); GN.EDU.rrhh.lw.message.fadeOut('solicitudMsg', 3000);;}});return false;">Aceptar</a>
+            </div>
+          </div>
+        </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+    </div>
+    
+    <div id="confirmReordenarDialog" class="modal fade" tabindex="-1" role="dialog" data-keyboard="false" data-backdrop="static">
+<form id="confirmReordenarDialogForm" name="confirmReordenarDialogForm" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="confirmReordenarDialogForm" value="confirmReordenarDialogForm">
+
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </button>
+              <h4 class="modal-title">
+                <i class="fa fa-arrows fa-2x"></i>
+              </h4>
+            </div>
+            <div class="modal-body">
+              <div class="panel panel-default pageinfo">
+                <div class="panel-body" style="padding:5px;">
+                  <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Inserte la oferta en la posición indicada y todas las que se encuentren a partir de ella se desplazarán un lugar hacia abajo.</p>
+                </div>
+              </div><div id="reordenarMsg"></div> 
+              
+              <div class="row">
+                <div class="col-xs-6 col-sm-4">
+                  <input type="text" style="display: none;"> <!-- prevent enter key submit form -->
+    <div class="form-group">
+      <label for="i400:inpNewOfertaOrder">Nueva posición *</label><input id="i400:inpNewOfertaOrder" name="i400:inpNewOfertaOrder" type="text" value="1" autocomplete="off" maxlength="100" placeholder="" style="background-color:#ffc;" aria-required="true" class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all form-control" role="textbox" aria-disabled="false" aria-readonly="false">
+    </div>
+                </div>
+                <div class="col-xs-12 col-sm-8">
+                  <label>&nbsp;</label>
+                  <p class="help-block">Puede mover oferta entre la posición 1 y 0
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="confirmReordenarDialogCancelBtn" class="btn btn-default" data-dismiss="modal">Cancelar</button><a id="confirmReordenarDialogOkBtn" href="#" class="ui-commandlink ui-widget btn btn-primary" onclick="PrimeFaces.ab({s:&quot;confirmReordenarDialogOkBtn&quot;,p:&quot;confirmReordenarDialogForm&quot;,u:&quot;misOfertasDtId reordenarMsg&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){GN.EDU.rrhh.lw.table.initPaginatorStyle();                  GN.EDU.rrhh.lw.popup.loading.hide();                  if (args &amp;&amp; !args.validationFailed) {                    $('#confirmReordenarDialog').modal('hide');                  };}});return false;">Aceptar</a>
+            </div>
+          </div>
+        </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+    </div>    
+    
+    <div id="confirmAnadirTodasDialog" class="modal fade" tabindex="-1" role="dialog" data-keyboard="false">
+<form id="confirmAnadirTodasDialogForm" name="confirmAnadirTodasDialogForm" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="confirmAnadirTodasDialogForm" value="confirmAnadirTodasDialogForm">
+
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h4 class="modal-title"><i class="fa fa-th fa-2x"></i> Añadir todas <span class="badge" style="font-size:1.2em;" id="totalAnadirCount"></span></h4>
+            </div>
+            <div class="modal-body">
+              <div class="panel panel-default pageinfo">
+                <div class="panel-body" style="padding:5px;">
+                  <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Se van a añadir a su solicitud todas las ofertas que se muestran en el orden en el que aparecen. Las ofertas para las que no disponga los perfiles requeridos no se añadirán.</p>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="confirmAnadirTodasDialogCancelBtn" class="btn btn-default" data-dismiss="modal">Cancelar</button><a id="anadirTodasBtn" href="#" class="ui-commandlink ui-widget btn btn-primary pull-right" aria-label="Añadir todas las ofertas a mi solicitud en el orden en el que se muestran." onclick="PrimeFaces.ab({s:&quot;anadirTodasBtn&quot;,p:&quot;anadirTodasBtn&quot;,u:&quot;misOfertasDtId ofertasDisponiblesDtId anadirDlgMessage totalOfertasElegidas&quot;,onst:function(cfg){GN.EDU.rrhh.lw.popup.loading.show();;},onco:function(xhr,status,args){$('#confirmAnadirTodasDialog').modal('hide');                              GN.EDU.rrhh.lw.table.initPaginatorStyle();                              GN.EDU.rrhh.lw.popup.loading.hide();                              GN.EDU.rrhh.lw.button.loadTooltips();                              GN.EDU.rrhh.lw.message.fadeOut('anadirDlgMessage', 4000);;}});return false;" title="Añadir todas las ofertas a mi solicitud en el orden en el que se muestran.">Añadir todas</a>
+            </div>
+          </div>
+        </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+    </div>
+    
+    <div id="confirmarAnularSolicitudDlg" class="modal fade" tabindex="-1" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+<form id="j_idt290" name="j_idt290" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="j_idt290" value="j_idt290">
+
+          <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </button>
+              <h4 class="modal-title">
+                <i class="fa fa-ban fa-2x"></i> Anular solicitud
+              </h4>
+            </div>        
+          <div class="modal-body">
+            <div id="pageInfo" class="panel panel-default pageinfo">
+              <div class="panel-body" style="padding:5px;">
+                <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Si anula esta solicitud, que en este momento consta como presentada, la misma no se tendrá en cuenta a la hora de resolver la convocatoria. Deberá presentar una nueva solicitud si quiere volver a participar en ella.</p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+           <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button><input type="submit" name="j_idt292" value="Anular solicitud" class="btn btn-primary" onclick="GN.EDU.rrhh.lw.popup.loading.show(); return true;">
+          </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+        </div>
+      </div>
+    </div>
+    
+    <div id="confirmarCopiarSolicitudDlg" class="modal fade" tabindex="-1" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+<form id="j_idt295" name="j_idt295" method="post" action="/atp/private/solicitud.xhtml" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="j_idt295" value="j_idt295">
+
+          <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </button>
+              <h4 class="modal-title">
+                <i class="fa fa-pencil fa-2x"></i> Copiar solicitud
+              </h4>
+            </div>        
+          <div class="modal-body">
+            <div id="pageInfo" class="panel panel-default pageinfo">
+              <div class="panel-body" style="padding:5px;">
+                <p><i class="fa fa-info-circle fa-2x"></i>&nbsp;Pulse sobre el botón "Copiar solicitud" para realizar una nueva solicitud copiando las ofertas elegidas en la solicitud actual.</p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+           <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+           <a href="/atp/private/solicitud.xhtml?convid=1204&amp;solid=&amp;action=copy" class="btn btn-primary" onclick="GN.EDU.rrhh.lw.popup.loading.show(); return true;">
+            Copiar solicitud
+           </a>           
+          </div><input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="-5997211036967731112:8803131036476521391" autocomplete="off">
+</form>
+        </div>
+      </div>
+    </div>
+    
+    <nav style="visibility:hidden;!important">
+      <ul class="pager">
+        <li class="previous"><a href="/atp/index.xhtml" style="color:#777;">
+            <i class="fa fa-long-arrow-left">Volver a "Convocatorias en curso"</i></a>
+        </li>
+      </ul>
+    </nav>
+        
+      </div>
+    </div>
+    
+    <div class="navbar navbar-default navbar-fixed-bottom hidden-xs" style="min-height: 0px; background-color:white; border:0px;">
+      <div class="container-fluid">
+        <div id="pie">
+          <!--googleoff: all-->
+          <a href="//www.navarra.es/home_es" class="gobiernoNavarra">
+            <i class="sprite sprite-logo-pie-es" alt="Nafarroako Gobernua / Gobierno de Navarra"></i>
+          </a>
+          <p>
+            <a href="//www.navarra.es/home_es/Indices/Sugerencias/default.htm" accesskey="c">Contacte con nosotros</a> | 
+            <a href="//www.navarra.es/home_es/Aviso/accesibilidad.htm" accesskey="2">Accesibilidad</a> | 
+            <a href="//www.navarra.es/home_es/Aviso/avisoLegal.htm">Aviso legal</a> | 
+            <a href="//www.navarra.es/home_es/Indices/Mapa+web/" accesskey="m">Mapa web</a>
+          </p>
+          <!--googleon: all-->
+        </div>
+      </div>
+    </div><script type="text/javascript" src="/atp/javax.faces.resource/js/bootstrap.min.js.xhtml?ln=theme&amp;v=2_3"></script><script type="text/javascript" src="/atp/javax.faces.resource/js/app.js.xhtml?ln=theme&amp;v=2_3"></script>
+  
+</body></html>
