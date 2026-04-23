@@ -66,8 +66,13 @@ def parse_offers(html: str) -> list[Offer]:
         center = cells[4].get_text(strip=True)
         jornada_raw = cells[7].get_text(strip=True)
 
-        # Parse "0590/INSTALACIONES ELECTROTÉCNICAS/C" → body="0590", specialty="INSTALACIONES ELECTROTÉCNICAS"
-        body, specialty = _parse_lista(lista_raw)
+        # Parse "0590/INSTALACIONES ELECTROTÉCNICAS/C" → body="0590", specialty="INSTALACIONES ELECTROTÉCNICAS", lang="C"
+        body, specialty, lang = _parse_lista(lista_raw)
+        
+        # Filtramos automáticamente las ofertas en Euskera ("E") según lo pedido
+        # Usamos startswith porque a veces viene con info extra, ej: "E (perfil de lengua extranjera: inglés)"
+        if lang.upper().startswith("E"):
+            continue
 
         # Parse "SUPERIOR A MEDIA JORNADA (12)" → 12
         hours = _parse_hours(jornada_raw)
@@ -91,12 +96,13 @@ def parse_offers(html: str) -> list[Offer]:
     return offers
 
 
-def _parse_lista(raw: str) -> tuple[str, str]:
-    """Parse '0590/INSTALACIONES ELECTROTÉCNICAS/C' → ('0590', 'INSTALACIONES ELECTROTÉCNICAS')."""
+def _parse_lista(raw: str) -> tuple[str, str, str]:
+    """Parse '0590/INSTALACIONES ELECTROTÉCNICAS/C' → ('0590', 'INSTALACIONES ELECTROTÉCNICAS', 'C')."""
     parts = raw.split("/")
-    if len(parts) >= 2:
-        return parts[0].strip(), parts[1].strip()
-    return "", raw.strip()
+    body = parts[0].strip() if len(parts) >= 1 else ""
+    specialty = parts[1].strip() if len(parts) >= 2 else raw.strip()
+    lang = parts[2].strip() if len(parts) >= 3 else "C" # Default to Castellano if not specified
+    return body, specialty, lang
 
 
 def _parse_hours(raw: str) -> int:

@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def main(offer_id: str) -> None:
+async def main(offer_id: str, convid: str = "1205") -> None:
     username = read_secret("educa-username")
     password = read_secret("educa-password")
     if not username or not password:
@@ -43,6 +43,7 @@ async def main(offer_id: str) -> None:
                 page,
                 email="vicente.tanco@edu.uah.es",
                 phone="681864143",
+                convid=convid,
             )
             logger.info("Prewarm OK. Waiting 3s to simulate trigger delay.")
             await asyncio.sleep(3)
@@ -73,7 +74,9 @@ async def main(offer_id: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/test_fast_path_dry.py <offer_id>")
+    if len(sys.argv) < 2:
+        print("Usage: python scripts/test_fast_path_dry.py <offer_id> [convid]")
         sys.exit(1)
-    asyncio.run(main(sys.argv[1]))
+    offer_id = sys.argv[1]
+    convid = sys.argv[2] if len(sys.argv) > 2 else "1205"
+    asyncio.run(main(offer_id, convid))

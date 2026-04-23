@@ -216,10 +216,17 @@ def run_thursday(
             await app.start()
             await app.updater.start_polling()
             try:
-                await _poll_until(prewarm_start)
+                # Polling in background until target_ts
+                poll_task = asyncio.create_task(_poll_until(target_ts))
+
+                now = datetime.now()
+                if now < prewarm_start:
+                    wait_s = (prewarm_start - now).total_seconds()
+                    click.echo(f"Waiting {wait_s:.1f}s until prewarm...")
+                    await asyncio.sleep(wait_s)
 
                 click.echo("Starting prewarm + fast-path...")
-                submitted = await run_fast_path(
+                submitted, elapsed_s = await run_fast_path(
                     queue=queue,
                     target_ts=target_ts,
                     username=username,
@@ -231,9 +238,30 @@ def run_thursday(
                     retry_backoff_s=1.0,
                     headless=headless,
                 )
-                click.echo(f"fast-path submitted {submitted} offers")
+                click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
+                
+                if submitted:
+                    details = []
+                    for oid in submitted:
+                        offer = storage.get_offer(oid)
+                        if offer:
+                            details.append(f"• <code>{oid}</code>: {offer.specialty} ({offer.locality})")
+                        else:
+                            details.append(f"• <code>{oid}</code>")
+                    offers_str = "\n".join(details)
+                    
+                    await app.bot.send_message(
+                        chat_id=chat_id,
+                        text=(
+                            f"✅ <b>Ráfaga del jueves completada</b>\n\n"
+                            f"Se han presentado {len(submitted)} solicitudes en <b>{elapsed_s:.3f} segundos</b> desde la apertura de las 14:00.\n\n"
+                            f"<b>Ofertas aplicadas:</b>\n{offers_str}"
+                        ),
+                        parse_mode="HTML"
+                    )
 
-                await asyncio.sleep(60)
+                await asyncio.sleep(10)
+                poll_task.cancel()
             finally:
                 await app.updater.stop()
                 await app.stop()

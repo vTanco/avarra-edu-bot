@@ -30,22 +30,17 @@ async def run_fast_path(
     max_retries: int = 10,
     retry_backoff_s: float = 0.5,
     headless: bool = True,
-) -> int:
+) -> tuple[list[str], float]:
     """Run the Thursday fast-path:
       - Launch browser, login, prewarm page (navigate + fill + open modal).
       - precise_sleep_until(target_ts).
       - Fire submission with queue snapshot.
       - On any ApplicationError after fire, retry: relogin + prewarm + fire, up to max_retries.
 
-    Returns the number of offers successfully submitted.
+    Returns (list_of_submitted_offers, elapsed_seconds).
     """
-    offer_ids = await queue.snapshot()
-    if not offer_ids:
-        logger.warning("fast_path: queue is empty, aborting")
-        return 0
-
     ntp_offset = get_ntp_offset()
-    logger.info(f"fast_path: starting with {len(offer_ids)} offers, ntp_offset={ntp_offset:.3f}s")
+    logger.info(f"fast_path: starting prewarm phase, ntp_offset={ntp_offset:.3f}s")
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=headless)
@@ -72,25 +67,27 @@ async def run_fast_path(
                     current_ids = await queue.snapshot()
                     if not current_ids:
                         logger.warning("fast_path: queue emptied before fire, aborting")
-                        return 0
+                        return [], 0.0
 
-                    added = await fire_submission(page, offer_ids=current_ids)
-                    logger.info(f"fast_path: submitted {added} offers on attempt {attempt}")
-                    return added
+                    import time
+                    start_fire = time.monotonic()
+                    added, elapsed = await fire_submission(page, offer_ids=current_ids, start_time=start_fire)
+                    logger.info(f"fast_path: submitted {len(added)} offers on attempt {attempt} in {elapsed:.3f}s")
+                    return added, elapsed
 
                 except ApplicationError as exc:
                     logger.warning(f"fast_path: attempt {attempt} failed: {exc}")
                     prewarmed = False
                     if attempt >= max_retries:
                         logger.error("fast_path: exhausted retries")
-                        return 0
+                        return [], 0.0
                     await asyncio.sleep(retry_backoff_s)
                 except Exception as exc:
                     logger.exception(f"fast_path: unexpected error on attempt {attempt}: {exc}")
                     prewarmed = False
                     if attempt >= max_retries:
-                        return 0
+                        return [], 0.0
                     await asyncio.sleep(retry_backoff_s)
-            return 0
+            return [], 0.0
         finally:
             await browser.close()

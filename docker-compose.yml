@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: navarra-edu-bot
+    restart: unless-stopped
+    environment:
+      - EDUCA_USERNAME=${EDUCA_USERNAME}
+      - EDUCA_PASSWORD=${EDUCA_PASSWORD}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TZ=Europe/Madrid
+    volumes:
+      - bot_state:/root/.navarra-edu-bot
+    command: ["python", "-m", "navarra_edu_bot", "run-thursday", "--headless"]
+
+volumes:
+  bot_state:

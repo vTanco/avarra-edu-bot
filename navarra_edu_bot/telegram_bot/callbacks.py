@@ -47,22 +47,27 @@ def build_callback_handler(
                 parse_mode="HTML",
                 reply_markup=None,
             )
+            import time
+            click_time = time.monotonic()
+            
             try:
                 from navarra_edu_bot.scraper.apply import apply_single_offer_flow
-                await apply_single_offer_flow(
+                added_offers, true_latency = await apply_single_offer_flow(
                     offer_id=offer_id,
                     email="vicente.tanco@edu.uah.es",
                     phone="681864143",
+                    convid="1205",
                 )
                 await query.edit_message_text(
-                    f"{query.message.text_html}\n\n✅ <b>Solicitud Presentada</b>",
+                    f"{query.message.text_html}\n\n✅ <b>Solicitud Presentada</b> (Tardó {true_latency:.2f} segundos)",
                     parse_mode="HTML",
                     reply_markup=None,
                 )
             except Exception as e:
-                log.error("apply_failed", error=str(e))
+                elapsed = time.monotonic() - click_time
+                log.error("apply_failed", error=str(e), elapsed_s=elapsed)
                 await query.edit_message_text(
-                    f"{query.message.text_html}\n\n❌ <b>Error al aplicar:</b> {e}",
+                    f"{query.message.text_html}\n\n❌ <b>Error al aplicar</b> tras {elapsed:.2f}s: {e}",
                     parse_mode="HTML",
                     reply_markup=None,
                 )

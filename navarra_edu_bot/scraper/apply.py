@@ -30,6 +30,11 @@ async def prewarm_application_context(
     try:
         await page.goto(url, timeout=timeout_ms)
         await page.wait_for_load_state("networkidle", timeout=timeout_ms)
+        
+        # Si la participación no está iniciada, el portal nos redirige a ficha.xhtml
+        if "ficha.xhtml" in page.url or "index.xhtml" in page.url:
+            raise ApplicationError(f"prewarm: portal redirected to {page.url} (form closed?)")
+            
     except Exception as exc:
         raise ApplicationError("prewarm: could not navigate to solicitud.xhtml") from exc
 
@@ -54,17 +59,22 @@ async def fire_submission(
     *,
     offer_ids: list[str],
     timeout_ms: int = 15000,
-) -> int:
+    start_time: float | None = None,
+) -> tuple[list[str], float]:
     """Click add buttons for target offers, then presentar + confirm.
 
-    Returns the number of offers successfully added. Raises ApplicationError on any
-    failure after the add phase (so caller can retry).
+    Returns (list_of_added_offer_ids, true_latency_seconds).
+    Raises ApplicationError on any failure after the add phase (so caller can retry).
     """
+    import time
+    if start_time is None:
+        start_time = time.monotonic()
+
     if not offer_ids:
         logger.warning("fire: no offer_ids, skipping")
-        return 0
+        return [], 0.0
 
-    added_count = 0
+    added_offers = []
     rows = page.locator("#ofertasDisponiblesDtId_data > tr")
     row_count = await rows.count()
 
@@ -81,11 +91,11 @@ async def fire_submission(
             continue
         try:
             await add_btn.click(timeout=timeout_ms)
-            added_count += 1
+            added_offers.append(row_offer_id)
         except Exception as exc:
             logger.error(f"fire: failed to add {row_offer_id}: {exc}")
 
-    if added_count == 0:
+    if not added_offers:
         raise ApplicationError(f"fire: none of {offer_ids} were addable")
 
     close_modal_btn = page.locator("#ofertasDisponiblesDialog button.close")
@@ -101,13 +111,17 @@ async def fire_submission(
 
     try:
         await page.locator("button#doSaveSolicitudBtn").click(timeout=timeout_ms)
+        # Aquí es cuando la petición real sale hacia el servidor de Navarra.
+        # Medimos la latencia real aquí.
+        true_latency = time.monotonic() - start_time
+        
         await page.wait_for_selector("#presentarDlg", state="hidden", timeout=timeout_ms)
         await page.wait_for_load_state("networkidle", timeout=timeout_ms)
     except Exception as exc:
         raise ApplicationError("fire: could not confirm") from exc
 
-    logger.info(f"fire: submitted {added_count} offers")
-    return added_count
+    logger.info(f"fire: submitted {len(added_offers)} offers in {true_latency:.3f}s")
+    return added_offers, true_latency
 
 
 async def apply_to_offers(
@@ -118,20 +132,20 @@ async def apply_to_offers(
     phone: str,
     convid: str = "1204",
     timeout_ms: int = 15000,
-) -> None:
+) -> tuple[list[str], float]:
     """Backwards-compatible wrapper: prewarm + fire in sequence."""
     if not offer_ids:
         logger.info("No offers to apply to.")
-        return
+        return [], 0.0
     await prewarm_application_context(
         page, email=email, phone=phone, convid=convid, timeout_ms=timeout_ms,
     )
-    await fire_submission(page, offer_ids=offer_ids, timeout_ms=timeout_ms)
+    return await fire_submission(page, offer_ids=offer_ids, timeout_ms=timeout_ms)
 
 
 async def apply_single_offer_flow(
     offer_id: str, email: str, phone: str, convid: str = "1204",
-) -> None:
+) -> tuple[list[str], float]:
     """Launch browser, login, apply to a single offer, close. Used by non-Thursday callbacks."""
     from playwright.async_api import async_playwright
 
@@ -149,7 +163,7 @@ async def apply_single_offer_flow(
             context = await browser.new_context()
             page = await context.new_page()
             await login_educa(page, username=username, password=password)
-            await apply_to_offers(
+            return await apply_to_offers(
                 page, offer_ids=[offer_id], email=email, phone=phone, convid=convid,
             )
         finally:
