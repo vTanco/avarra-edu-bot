@@ -39,8 +39,8 @@ async def prewarm_application_context(
         raise ApplicationError("prewarm: could not navigate to solicitud.xhtml") from exc
 
     try:
-        await page.fill("input[name='i10:inpEmail']", email, timeout=timeout_ms)
-        await page.fill("input[name='i20:inpTfno1']", phone, timeout=timeout_ms)
+        await page.fill("input[name$='inpEmail']", email, timeout=timeout_ms)
+        await page.fill("input[name$='inpTfno1']", phone, timeout=timeout_ms)
     except Exception as exc:
         raise ApplicationError("prewarm: could not fill email/phone") from exc
 
