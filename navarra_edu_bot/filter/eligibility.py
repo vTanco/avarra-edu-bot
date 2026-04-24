@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 from datetime import datetime
 
 from navarra_edu_bot.config.schema import ListEntry
@@ -8,6 +9,13 @@ from navarra_edu_bot.storage.models import Offer
 _THURSDAY = 3  # Monday=0 ... Sunday=6
 _WEEKDAYS = {0, 1, 2, 4}  # Mon, Tue, Wed, Fri — "closed" days
 
+def _normalize(s: str) -> str:
+    """Lowercase and remove accents/diacritics."""
+    s = s.lower().strip()
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s)
+        if unicodedata.category(c) != "Mn"
+    )
 
 def is_eligible(
     offer: Offer,
@@ -33,6 +41,7 @@ def is_eligible(
 
 
 def _match_any(offer: Offer, entries: list[ListEntry]) -> bool:
+    offer_spec = _normalize(offer.specialty)
     return any(
-        e.body == offer.body and e.specialty.lower() == offer.specialty.lower() for e in entries
+        e.body == offer.body and _normalize(e.specialty) == offer_spec for e in entries
     )
