@@ -9,6 +9,15 @@ def _keychain_read(account: str) -> str:
     return read_secret(account)
 
 
+def compute_next_target(now, target_hour: int, target_minute: int):
+    from datetime import timedelta
+
+    target = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
+    if target <= now:
+        target = target + timedelta(days=1)
+    return target
+
+
 @click.group()
 @click.pass_context
 def main(ctx: click.Context) -> None:
@@ -149,7 +158,12 @@ def run_thursday(
     email: str,
     phone: str,
 ) -> None:
-    """Thursday fast-path: poll + notify 13:30-14:00, prewarm at 13:55, fire at 14:00."""
+    """Daily fast-path loop: each day, poll + notify before target hour, prewarm + fire at target.
+
+    Runs forever in a loop. After each cycle (which ends just after target hour), it recomputes
+    the next target (tomorrow at target_hour) and continues. The Telegram app is kept alive
+    across cycles. Designed to survive container lifetime — does not depend on Docker restart.
+    """
     from datetime import datetime, timedelta
     from pathlib import Path
 
@@ -172,20 +186,7 @@ def run_thursday(
     username = _keychain_read("educa-username")
     password = _keychain_read("educa-password")
 
-    queue = ThursdayQueue()
-    app = build_bot_app(token=token, chat_id=chat_id)
-    app.add_handler(build_callback_handler(storage, thursday_queue=queue))
-
-    now = datetime.now()
-    target_ts = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
-    if target_ts <= now:
-        target_ts = target_ts + timedelta(days=1)
-    prewarm_start = target_ts - timedelta(seconds=prewarm_seconds_before)
-
-    click.echo(f"Target: {target_ts.isoformat()}  Prewarm start: {prewarm_start.isoformat()}")
-
-    async def _poll_until(deadline: datetime) -> None:
-        seen: set[str] = set()
+    async def _poll_until(deadline: datetime, app, seen: set[str]) -> None:
         while datetime.now() < deadline:
             try:
                 offers = await fetch_offers(
@@ -201,68 +202,127 @@ def run_thursday(
                         reply_markup=offer_buttons(offer),
                         parse_mode="HTML",
                     )
-                await notify_new_offers(
+                sent_count = await notify_new_offers(
                     offers=offers, now=datetime.now(), config=cfg,
                     storage=storage, send=_send,
                 )
+                click.echo(
+                    f"poll ok @ {datetime.now().isoformat()} | fetched={len(offers)} sent={sent_count}"
+                )
             except Exception as exc:
                 click.echo(f"poll error: {exc}")
-            await asyncio.sleep(60)
+            await asyncio.sleep(cfg.scheduler.poll_interval_seconds)
+
+    async def _run_one_cycle(queue: ThursdayQueue, app, target_ts: datetime) -> None:
+        prewarm_start = target_ts - timedelta(seconds=prewarm_seconds_before)
+        click.echo(
+            f"Cycle target: {target_ts.isoformat()}  Prewarm start: {prewarm_start.isoformat()}"
+        )
+
+        # Reset queue and seen-set at the start of each cycle
+        await queue.drain()
+        seen: set[str] = set()
+
+        # Poll in background until target_ts
+        poll_task = asyncio.create_task(_poll_until(target_ts, app, seen))
+
+        now = datetime.now()
+        if now < prewarm_start:
+            wait_s = (prewarm_start - now).total_seconds()
+            click.echo(f"Waiting {wait_s:.1f}s until prewarm...")
+            await asyncio.sleep(wait_s)
+
+        click.echo("Starting prewarm + fast-path...")
+        try:
+            submitted, elapsed_s = await run_fast_path(
+                queue=queue,
+                target_ts=target_ts,
+                username=username,
+                password=password,
+                email=email,
+                phone=phone,
+                convid=convid,
+                max_retries=60,
+                retry_backoff_s=1.0,
+                headless=headless,
+            )
+            click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
+
+            if submitted:
+                details = []
+                for oid in submitted:
+                    offer = storage.get_offer(oid)
+                    if offer:
+                        details.append(
+                            f"• <code>{oid}</code>: {offer.specialty} ({offer.locality})"
+                        )
+                    else:
+                        details.append(f"• <code>{oid}</code>")
+                offers_str = "\n".join(details)
+
+                await app.bot.send_message(
+                    chat_id=chat_id,
+                    text=(
+                        f"✅ <b>Ráfaga completada</b>\n\n"
+                        f"Se han presentado {len(submitted)} solicitudes en "
+                        f"<b>{elapsed_s:.3f} segundos</b> desde la apertura de las "
+                        f"{target_hour:02d}:{target_minute:02d}.\n\n"
+                        f"<b>Ofertas aplicadas:</b>\n{offers_str}"
+                    ),
+                    parse_mode="HTML",
+                )
+        except Exception as exc:
+            click.echo(f"fast-path error: {exc}")
+            try:
+                await app.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"⚠️ Error en la ráfaga de las {target_hour:02d}:{target_minute:02d}: {exc}",
+                )
+            except Exception:
+                pass
+
+        # Brief grace, then cancel polling task cleanly
+        await asyncio.sleep(10)
+        poll_task.cancel()
+        try:
+            await poll_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
     async def _run() -> None:
+        queue = ThursdayQueue()
+        app = build_bot_app(token=token, chat_id=chat_id)
+        app.add_handler(build_callback_handler(storage, thursday_queue=queue))
+
         async with app:
             await app.start()
             await app.updater.start_polling()
             try:
-                # Polling in background until target_ts
-                poll_task = asyncio.create_task(_poll_until(target_ts))
-
-                now = datetime.now()
-                if now < prewarm_start:
-                    wait_s = (prewarm_start - now).total_seconds()
-                    click.echo(f"Waiting {wait_s:.1f}s until prewarm...")
-                    await asyncio.sleep(wait_s)
-
-                click.echo("Starting prewarm + fast-path...")
-                submitted, elapsed_s = await run_fast_path(
-                    queue=queue,
-                    target_ts=target_ts,
-                    username=username,
-                    password=password,
-                    email=email,
-                    phone=phone,
-                    convid=convid,
-                    max_retries=60,
-                    retry_backoff_s=1.0,
-                    headless=headless,
-                )
-                click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
-                
-                if submitted:
-                    details = []
-                    for oid in submitted:
-                        offer = storage.get_offer(oid)
-                        if offer:
-                            details.append(f"• <code>{oid}</code>: {offer.specialty} ({offer.locality})")
-                        else:
-                            details.append(f"• <code>{oid}</code>")
-                    offers_str = "\n".join(details)
-                    
-                    await app.bot.send_message(
-                        chat_id=chat_id,
-                        text=(
-                            f"✅ <b>Ráfaga del jueves completada</b>\n\n"
-                            f"Se han presentado {len(submitted)} solicitudes en <b>{elapsed_s:.3f} segundos</b> desde la apertura de las 14:00.\n\n"
-                            f"<b>Ofertas aplicadas:</b>\n{offers_str}"
-                        ),
-                        parse_mode="HTML"
-                    )
-
-                await asyncio.sleep(10)
-                poll_task.cancel()
+                while True:
+                    target_ts = compute_next_target(datetime.now(), target_hour, target_minute)
+                    try:
+                        await _run_one_cycle(queue, app, target_ts)
+                    except Exception as exc:
+                        click.echo(f"cycle error: {exc}")
+                        # Notify and continue to next day rather than crashing the loop
+                        try:
+                            await app.bot.send_message(
+                                chat_id=chat_id,
+                                text=f"⚠️ Error en ciclo diario: {exc}",
+                            )
+                        except Exception:
+                            pass
+                    # Small pause before computing next target (avoids tight loop on edge case)
+                    await asyncio.sleep(60)
             finally:
-                await app.updater.stop()
-                await app.stop()
+                try:
+                    await app.updater.stop()
+                except Exception:
+                    pass
+                try:
+                    await app.stop()
+                except Exception:
+                    pass
 
     asyncio.run(_run())
 

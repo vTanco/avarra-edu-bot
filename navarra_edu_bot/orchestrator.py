@@ -19,7 +19,7 @@ async def notify_new_offers(
     config: AppConfig,
     storage: Storage,
     send: Sender,
-) -> None:
+) -> int:
     eligible = [
         o
         for o in offers
@@ -30,8 +30,11 @@ async def notify_new_offers(
         preferred_localities=config.user.preferred_localities,
         specialty_order=config.user.specialty_preference_order,
     )
+    sent = 0
     for offer in ranked:
         if storage.get_offer(offer.offer_id) is not None:
             continue  # ya notificada previamente
         storage.upsert_offer(offer)
         await send(offer)
+        sent += 1
+    return sent
