@@ -1,23 +1,301 @@
-# Navarra Edu Bot
+<div align="center">
 
-Local macOS automation for the Navarra education telematic adjudication portal.
+# 🎓 Navarra Edu Bot
 
-See [design spec](docs/superpowers/specs/2026-04-22-navarra-edu-bot-design.md) for details.
+**Automatización inteligente del portal de adjudicación telemática de educación de Navarra**
 
-## Setup
+*Detecta ofertas en tiempo real, te avisa por Telegram y aplica más rápido que cualquier humano.*
 
-```bash
-uv venv
-uv pip install -e ".[dev]"
-playwright install chromium
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Playwright](https://img.shields.io/badge/Playwright-1.44+-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Railway](https://img.shields.io/badge/Railway-Deployed-0B0D0E?logo=railway&logoColor=white)](https://railway.app/)
+[![License](https://img.shields.io/badge/License-Personal_Use-lightgrey)](#-aviso-legal)
+
+</div>
+
+---
+
+## 📌 ¿Qué es esto?
+
+El portal de adjudicación de plazas docentes del Gobierno de Navarra publica ofertas entre las **13:30 y las 14:00** cada día laborable. A las **14:00:00 en punto** se abre el plazo para solicitar, y rige una regla brutal: **el primero que solicita, se la lleva**.
+
+Para un humano refrescando F5 manualmente, es una carrera perdida frente a otros candidatos haciendo lo mismo. Este bot resuelve el problema:
+
+1. **Vigila** el portal automáticamente entre 13:30 y 14:00.
+2. **Detecta** ofertas nuevas y te las manda a Telegram con **dos botones**: ✅ Aplicar o ❌ Descartar.
+3. **Tú decides** desde el móvil con un toque a cuál te interesa.
+4. A las **14:00:00.000** sincronizado por NTP, el bot dispara la solicitud con un navegador pre-autenticado y modal pre-cargado, en menos de 1 segundo.
+5. Si el portal cae por la avalancha (típico de los jueves), **reintenta sin parar** hasta entrar.
+
+---
+
+## 🎬 Demo
+
+> 📸 *Capturas reales del bot en funcionamiento — añade las tuyas en `docs/images/`*
+
+<div align="center">
+
+| Notificación de oferta | Confirmación al aplicar | Resumen del jueves |
+|:---:|:---:|:---:|
+| ![Notificación](docs/images/telegram-offer.png) | ![Confirmación](docs/images/telegram-applied.png) | ![Resumen](docs/images/thursday-burst.png) |
+| Llega a tu Telegram con un toque para aplicar | Tras pulsar **✅ Aplicar**, el bot ejecuta la solicitud | A las 14:00 dispara todas las confirmadas en milisegundos |
+
+</div>
+
+---
+
+## ✨ Funcionalidades
+
+- 🔄 **Polling autónomo** del portal cada minuto entre 13:30 y 14:00.
+- 🔐 **Autenticación SSO Keycloak** con la opción "Usuario Educa".
+- 🧮 **Filtro inteligente** por:
+  - Listas en las que estás `Disponible` (lunes/martes/miércoles/viernes).
+  - Especialidades abiertas según tu formación los **jueves** (Tecnología, Matemáticas, Dibujo, Física y Química…).
+  - Localidades preferidas (Pamplona, Orkoien/Orcoyen, Barañáin).
+- 📊 **Ranking** según preferencias (especialidad > localidad > horas lectivas).
+- 📲 **Botones inline** en Telegram para confirmar o descartar con un toque.
+- ⚡ **Fast-path para los jueves**:
+  - Sincronización **NTP** con el Real Observatorio de la Armada.
+  - Pre-warm del navegador 5 minutos antes (login + navegación + relleno de email/teléfono + apertura de modal).
+  - Disparo a las `14:00:00.000` con `precise_sleep_until` + busy-spin para minimizar jitter.
+  - **Retry infinito** con backoff de 1 s si el portal devuelve 5xx.
+- 💾 **Persistencia SQLite** con histórico de ofertas vistas y decisiones.
+- 📦 **Dockerizado** y desplegable en Railway con un solo `docker compose up`.
+- 🪵 **Logs estructurados** vía `structlog` con métricas de latencia reales (timestamp del click vs. 14:00:00).
+
+---
+
+## 🏗 Arquitectura
+
+```mermaid
+flowchart LR
+    subgraph "13:30 → 14:00"
+        A[⏱ Scheduler<br/>poll cada 60s] --> B[🌐 Login Educa<br/>Keycloak SSO]
+        B --> C[📋 Parser<br/>DataTable HTML]
+        C --> D[🔍 Filter<br/>Eligibility + Ranking]
+        D --> E[📲 Telegram<br/>oferta + botones]
+        E -.->|usuario pulsa ✅| F[(🗂 ThursdayQueue<br/>en memoria)]
+    end
+
+    subgraph "13:55"
+        F --> G[🔥 Pre-warm<br/>login + navega + rellena<br/>+ abre modal]
+    end
+
+    subgraph "14:00:00.000"
+        G --> H[🛰 NTP sync<br/>precise_sleep_until]
+        H --> I[⚡ Fire<br/>click añadir × N<br/>+ presentar + confirmar]
+        I -->|fallo| J[🔁 Retry loop<br/>backoff 1s]
+        J --> G
+        I -->|éxito| K[✅ Telegram<br/>resumen latencia]
+    end
 ```
 
-## Usage
+### Capas
 
-TBD during implementation.
+| Capa | Módulo | Responsabilidad |
+|---|---|---|
+| **Scraper** | `scraper/login.py` | Login SSO Keycloak |
+| | `scraper/fetch.py` | Orquesta navegador headless + parser |
+| | `scraper/parser.py` | Extrae ofertas del DataTable HTML |
+| | `scraper/apply.py` | `prewarm_application_context` + `fire_submission` |
+| **Filter** | `filter/eligibility.py` | Reglas día-de-la-semana + listas Disponible |
+| | `filter/ranker.py` | Ordena por especialidad → localidad → horas |
+| **Telegram** | `telegram_bot/formatter.py` | Mensajes HTML + botones inline |
+| | `telegram_bot/callbacks.py` | Routing apply/discard, encolado los jueves |
+| **Scheduler** | `scheduler/thursday_queue.py` | Cola async-safe de ofertas confirmadas |
+| | `scheduler/ntp_sync.py` | Offset NTP + `precise_sleep_until` |
+| | `scheduler/fast_path_worker.py` | Pre-warm + trigger + retry infinito |
+| **Storage** | `storage/db.py` | SQLite (offers, decisions) |
+| **CLI** | `cli.py` | `ping`, `fetch`, `run-once`, `run-thursday` |
 
-## launchd scheduling (Phase 3+)
+---
 
-The plist template lives in `deploy/navarra-edu-bot.plist.template`. It is NOT
-installed during phases 0–2 (no `run-daily` command exists yet). Installation
-instructions will appear in the Phase 3 plan.
+## 🚀 Instalación
+
+### Opción A — Docker (recomendado, lo que se usa en Railway)
+
+```bash
+git clone https://github.com/vTanco/avarra-edu-bot.git
+cd avarra-edu-bot
+
+# Crea tu config.yaml a partir del ejemplo
+cp config.example.yaml config.yaml
+# (edita config.yaml con tus listas Disponible, localidades, etc.)
+
+# Variables de entorno (en .env o exportadas)
+cat > .env << EOF
+EDUCA_USERNAME=tu_usuario_educa
+EDUCA_PASSWORD=tu_password_educa
+TELEGRAM_TOKEN=123456:ABC-DEF...
+TELEGRAM_CHAT_ID=123456789
+EOF
+
+docker compose up -d
+docker compose logs -f
+```
+
+### Opción B — Local macOS con `uv`
+
+```bash
+git clone https://github.com/vTanco/avarra-edu-bot.git
+cd avarra-edu-bot
+
+uv venv
+uv pip install -e ".[dev]"
+uv run playwright install chromium
+
+cp config.example.yaml ~/.navarra-edu-bot/config.yaml
+# Edita ~/.navarra-edu-bot/config.yaml
+
+# Guarda credenciales en macOS Keychain (no tocan disco en claro)
+security add-generic-password -s navarra-edu-bot -a educa-username -w "tu_usuario"
+security add-generic-password -s navarra-edu-bot -a educa-password -w "tu_pass"
+security add-generic-password -s navarra-edu-bot -a telegram-token -w "123456:ABC..."
+security add-generic-password -s navarra-edu-bot -a telegram-chat-id -w "123456789"
+
+# Healthcheck
+uv run navarra-edu-bot ping-telegram
+```
+
+### Opción C — Despliegue en Railway
+
+1. Fork del repositorio.
+2. Conecta el repo a Railway.
+3. Define las variables de entorno (`EDUCA_USERNAME`, `EDUCA_PASSWORD`, `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`, `TZ=Europe/Madrid`).
+4. Railway detecta el `Dockerfile` y construye automáticamente.
+5. El comando por defecto es `run-thursday --headless`. Cambia `CMD` en el `Dockerfile` si quieres otro comportamiento.
+
+---
+
+## ⚙️ Configuración
+
+Edita `config.yaml` (o `~/.navarra-edu-bot/config.yaml` en local):
+
+```yaml
+user:
+  preferred_localities:
+    - "Pamplona"
+    - "Orkoien"
+    - "Barañáin"
+  specialty_preference_order:
+    - "Tecnología"
+    - "Matemáticas"
+    - "Dibujo"
+
+# Listas en las que estás Disponible (L/M/X/V abren sólo éstas)
+available_lists:
+  - body: "0590"
+    specialty: "Tecnología"
+  - body: "0598"
+    specialty: "Mantenimiento de Vehículos"
+  # ...
+
+# Listas que se abren los jueves según tu formación
+thursday_open_specialties:
+  - body: "0590"
+    specialty: "Tecnología"
+  - body: "0590"
+    specialty: "Matemáticas"
+  - body: "0590"
+    specialty: "Dibujo"
+  - body: "0590"
+    specialty: "Física y Química"
+
+scheduler:
+  daily_start: "13:25"
+  daily_end: "14:05"
+  poll_interval_seconds: 15
+```
+
+> 🔒 **Las credenciales nunca van a `config.yaml`.** Viven en variables de entorno (Docker/Railway) o en macOS Keychain (local).
+
+---
+
+## 🛠 Comandos CLI
+
+| Comando | Descripción |
+|---|---|
+| `navarra-edu-bot ping` | Healthcheck básico — devuelve `pong`. |
+| `navarra-edu-bot ping-telegram` | Envía un mensaje de prueba a tu chat de Telegram. |
+| `navarra-edu-bot fetch` | Login + scraping puntual sin notificar. Útil para depurar selectores. |
+| `navarra-edu-bot run-once` | Ciclo completo (fetch + filter + notify) **sin** aplicar. Polling de callbacks 60 s. |
+| `navarra-edu-bot run-thursday` | Modo carrera: polling 13:30→14:00 + pre-warm + fire @ 14:00:00 + retry. |
+
+Ejemplo:
+
+```bash
+# Ejecutar el flujo del jueves (en headless por defecto)
+uv run navarra-edu-bot run-thursday
+
+# Modo headed para ver lo que hace el navegador
+uv run navarra-edu-bot run-thursday --headed
+
+# Customizar hora objetivo (útil para test fuera de las 14:00 reales)
+uv run navarra-edu-bot run-thursday --target-hour 16 --target-minute 30
+```
+
+---
+
+## 📁 Estructura del proyecto
+
+```
+navarra-edu-bot/
+├── navarra_edu_bot/
+│   ├── cli.py                      # Click CLI con todos los comandos
+│   ├── config/                     # Pydantic schema + YAML loader + Keychain
+│   ├── filter/                     # Eligibility + ranking
+│   ├── scheduler/                  # Cola jueves + NTP + fast_path_worker
+│   ├── scraper/                    # Login + fetch + parser + apply
+│   ├── storage/                    # SQLite models + db
+│   └── telegram_bot/               # Cliente + formatter + callbacks
+├── tests/                          # Pytest + fixtures HTML reales
+├── scripts/                        # Capturadores y dry-run scripts
+├── docs/
+│   ├── superpowers/specs/          # Spec de diseño (brainstorming)
+│   ├── superpowers/plans/          # Planes de implementación TDD
+│   └── images/                     # Capturas para README
+├── deploy/                         # launchd plist (alternativa a Docker)
+├── Dockerfile
+├── docker-compose.yml
+├── config.example.yaml
+└── pyproject.toml
+```
+
+---
+
+## 🧪 Tests
+
+```bash
+uv run pytest -v
+```
+
+Los tests usan fixtures HTML reales capturadas del portal en `tests/fixtures/`. Cubren parser, filter, ranking, storage, callbacks y el worker fast-path con mocks de Playwright.
+
+---
+
+## 📚 Documentación adicional
+
+- **[Spec de diseño](docs/superpowers/specs/2026-04-22-navarra-edu-bot-design.md)** — arquitectura completa, decisiones, riesgos.
+- **[Plan Fases 0-2](docs/superpowers/plans/2026-04-22-navarra-edu-bot-phases-0-2.md)** — scaffolding, scraper, filter, Telegram.
+- **[Plan Fase 4 fast-path](docs/superpowers/plans/2026-04-23-fase-4-fast-path-jueves.md)** — la carrera del jueves paso a paso.
+
+---
+
+## ⚠️ Aviso legal
+
+Este proyecto es **de uso personal**, desarrollado para automatizar las gestiones de un único candidato titular del bot. No es un servicio compartido ni un producto comercial.
+
+- Las credenciales de Educa son personales e intransferibles. **No las compartas.**
+- El bot no realiza ninguna acción que un humano no pueda hacer manualmente desde la web; sólo lo hace más rápido y de forma desatendida.
+- El uso es responsabilidad de cada usuario; el autor no responde por bloqueos de cuenta, sanciones administrativas u otros perjuicios derivados del uso del bot.
+- Si el portal del Gobierno de Navarra cambia su política de uso o introduce captchas, el bot puede dejar de funcionar y deberá ajustarse manualmente.
+
+---
+
+<div align="center">
+
+Hecho con ☕ y mucho `playwright` por **Vicente Tanco Aguas**
+
+</div>
