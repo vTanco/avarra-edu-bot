@@ -171,7 +171,8 @@ def run_thursday(
     from navarra_edu_bot.orchestrator import notify_new_offers
     from navarra_edu_bot.scheduler.fast_path_worker import run_fast_path
     from navarra_edu_bot.scheduler.thursday_queue import ThursdayQueue
-    from navarra_edu_bot.scraper.fetch import fetch_offers
+    from navarra_edu_bot.scraper.http_session import HttpSession
+    from navarra_edu_bot.scraper.parser import SessionExpiredError, parse_offers
     from navarra_edu_bot.storage.db import Storage
     from navarra_edu_bot.telegram_bot.callbacks import build_callback_handler
     from navarra_edu_bot.telegram_bot.client import build_bot_app
@@ -186,12 +187,30 @@ def run_thursday(
     username = _keychain_read("educa-username")
     password = _keychain_read("educa-password")
 
+    http_session = HttpSession(username=username, password=password, headless=headless)
+
+    async def _fetch_offers_via_http() -> list:
+        """Fetch offers via HTTP. Refresh cookies on session expiry, retry once."""
+        for attempt in range(2):
+            try:
+                html = await http_session.fetch_areapersonal_html()
+                return parse_offers(html)
+            except SessionExpiredError:
+                click.echo("session expired, refreshing via Playwright")
+                await http_session.refresh()
+            except Exception:
+                if attempt == 0:
+                    # Network blip or first call before refresh — try refresh once
+                    click.echo("http fetch failed, refreshing session")
+                    await http_session.refresh()
+                else:
+                    raise
+        return []
+
     async def _poll_until(deadline: datetime, app, seen: set[str]) -> None:
         while datetime.now() < deadline:
             try:
-                offers = await fetch_offers(
-                    username=username, password=password, headless=headless,
-                )
+                offers = await _fetch_offers_via_http()
                 async def _send(offer):
                     if offer.offer_id in seen:
                         return
@@ -222,6 +241,13 @@ def run_thursday(
         # Reset queue and seen-set at the start of each cycle
         await queue.drain()
         seen: set[str] = set()
+
+        # Refresh HTTP session cookies at the start of each cycle (one Playwright
+        # login per day; subsequent polls reuse the cookies via aiohttp).
+        try:
+            await http_session.refresh()
+        except Exception as exc:
+            click.echo(f"http_session refresh failed: {exc}")
 
         # Poll in background until target_ts
         poll_task = asyncio.create_task(_poll_until(target_ts, app, seen))
@@ -315,6 +341,10 @@ def run_thursday(
                     # Small pause before computing next target (avoids tight loop on edge case)
                     await asyncio.sleep(60)
             finally:
+                try:
+                    await http_session.close()
+                except Exception:
+                    pass
                 try:
                     await app.updater.stop()
                 except Exception:
