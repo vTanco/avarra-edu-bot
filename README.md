@@ -67,6 +67,81 @@ Para un humano refrescando F5 manualmente, es una carrera perdida frente a otros
 
 ---
 
+## 📅 Rutina diaria
+
+El bot vive 24/7 en Railway. Cada día laborable hace lo mismo, pero las **ofertas elegibles** dependen del día de la semana según el reglamento de adjudicación de Navarra:
+
+### Lunes, martes, miércoles y viernes (días "cerrados")
+
+Sólo se ofertan las plazas de las listas en las que el usuario está marcado como **Disponible** (se renueva cada año). En la práctica son las especialidades del cuerpo 0590 (Equipos Electrónicos, Org. Proyectos Fab. Mecánica, Sistemas Electrotécnicos, Sistemas Electrónicos, Tecnología) y del 0598 (Mantenimiento de Vehículos, Carpintería).
+
+### Jueves (día "abierto" para nueva incorporación)
+
+Se abren plazas adicionales a quien acredite formación adecuada aunque no esté en lista. En el caso del titular del bot (Grado + Máster en Ing. Tecnologías Industriales), eso suele incluir: **Tecnología, Matemáticas, Dibujo y Física y Química** del cuerpo 0590. Es el día que **paga la pena** correr — hay competencia real por la oferta y gana el primero que la solicita.
+
+### Línea temporal de un día cualquiera
+
+```
+00:00 ─┐
+       │  Bot vivo en reposo (~80 MB RAM).
+       │  Telegram acepta /status, /queue, /cancel en cualquier momento.
+       │
+13:25 ─┤
+       │  Inicio del ciclo del día:
+       │    • Refresh de cookies vía Playwright (10 s, pico ~200 MB).
+       │    • Lectura de solicitudes.xhtml para saber qué ya está aplicado.
+       │    • Auto-detección del convid activo.
+       │
+13:30 ─┤  Empieza la ventana de publicación oficial.
+       │  Polling HTTP cada 120 s contra areapersonal.xhtml:
+       │    • Filtra por elegibilidad del día (Disponible vs. jueves abierto).
+       │    • Ordena por preferencia (Tecnología > Matemáticas > Dibujo,
+       │      Pamplona > Orkoien > Barañáin > resto, jornada completa primero).
+       │    • Manda a Telegram cada oferta nueva con botones ✅ Aplicar / ❌ Descartar.
+       │
+       │  El usuario va decidiendo desde el móvil:
+       │    • L/M/X/V → aplicar dispara la solicitud al instante.
+       │    • Jueves  → aplicar añade el offer_id a la cola y espera a las 14:00.
+       │
+13:55 ─┤
+       │  Pre-warm de N navegadores en paralelo (uno por oferta en la cola):
+       │    login + navegación a solicitud.xhtml + email/teléfono rellenados +
+       │    modal "Elegir ofertas" abierto. Todos en espera.
+       │
+14:00:00.000 ─┤
+       │  Sincronización NTP (Real Observatorio Armada) + busy-spin para
+       │  precisión sub-100 ms. Disparo simultáneo de las N solicitudes
+       │  vía asyncio.gather. Cada contexto añade su oferta, presenta y confirma.
+       │
+14:00 ─┤
+       │  Verificación post-disparo: GET solicitudes.xhtml y comprobar que
+       │  cada oferta disparada figura efectivamente como solicitud presentada.
+       │
+14:05 ─┤
+       │  Heartbeat a Telegram con el resumen del día:
+       │    💓 Resumen del ciclo 2026-04-29 14:00
+       │    📊 Última poll: 4 ofertas detectadas
+       │    📋 Cola al disparo: 2 solicitada(s)
+       │    ⚡ Ráfaga: 2 en 0.842 s
+       │    ✅ Confirmadas: 121820, 121936
+       │
+14:06 ─┘
+       └─ El loop calcula el target del día siguiente (mañana 14:00) y
+          entra en reposo hasta las 13:25 del próximo día laborable.
+```
+
+### Sábados y domingos
+
+El portal no publica ofertas, pero el bot sigue vivo. El ciclo dispara a las 14:00 con cola vacía → cero ráfaga → heartbeat anuncia "no había nada en cola — bot vivo y a la espera". Esto sirve también como **canary**: si un sábado no llega heartbeat, sé que algo se ha caído antes de que importe.
+
+### Casos especiales
+
+- **Convocatoria finalizada**: si el portal muestra "Ha finalizado el plazo de participación", el bot detecta la frase, pausa el polling, y te avisa una sola vez para que no spamee errores.
+- **Sesión expirada en plena ventana**: el `HttpSession` re-llama a Playwright para reloggear y reanuda el polling sin perder ofertas.
+- **Caída del portal a las 14:00 (típico de los jueves)**: cada contexto reintenta hasta 60 veces con backoff de 1 s. El que entra primero, gana.
+
+---
+
 ## 🏗 Arquitectura
 
 ```mermaid
