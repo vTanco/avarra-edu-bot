@@ -26,8 +26,24 @@ CREATE TABLE IF NOT EXISTS decisions (
     FOREIGN KEY (offer_id) REFERENCES offers(offer_id)
 );
 
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    level TEXT NOT NULL,
+    payload TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS kv_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_offers_seen_at ON offers(seen_at);
 CREATE INDEX IF NOT EXISTS idx_decisions_decided_at ON decisions(decided_at);
+CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
+CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);
 """
 
 
@@ -114,6 +130,93 @@ class Storage:
                 "SELECT preselected FROM decisions WHERE offer_id = ?", (offer_id,)
             ).fetchone()
         return bool(row and row["preselected"])
+
+    # ---------- events ----------
+
+    def log_event(
+        self, *, kind: str, level: str = "info", payload: dict | None = None
+    ) -> None:
+        """Append a structured event row. payload is JSON-serialised."""
+        import json
+        with self._conn() as conn:
+            conn.execute(
+                "INSERT INTO events(ts, kind, level, payload) VALUES (?, ?, ?, ?)",
+                (
+                    datetime.now().isoformat(),
+                    kind,
+                    level,
+                    json.dumps(payload or {}, default=str, ensure_ascii=False),
+                ),
+            )
+
+    def recent_events(
+        self, *, limit: int = 20, kind: str | None = None, level: str | None = None
+    ) -> list[dict]:
+        """Return the most recent events, newest first."""
+        import json
+        sql = "SELECT id, ts, kind, level, payload FROM events"
+        clauses, args = [], []
+        if kind:
+            clauses.append("kind = ?")
+            args.append(kind)
+        if level:
+            clauses.append("level = ?")
+            args.append(level)
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY id DESC LIMIT ?"
+        args.append(limit)
+        with self._conn() as conn:
+            rows = conn.execute(sql, args).fetchall()
+        return [
+            {
+                "id": r["id"],
+                "ts": r["ts"],
+                "kind": r["kind"],
+                "level": r["level"],
+                "payload": json.loads(r["payload"]) if r["payload"] else {},
+            }
+            for r in rows
+        ]
+
+    def prune_events(self, *, keep_days: int = 30) -> int:
+        cutoff = (datetime.now() - timedelta(days=keep_days)).isoformat()
+        with self._conn() as conn:
+            cur = conn.execute("DELETE FROM events WHERE ts < ?", (cutoff,))
+            return cur.rowcount
+
+    # ---------- kv_state (cookies, applied_today, etc.) ----------
+
+    def set_state(self, key: str, value: str) -> None:
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO kv_state(key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value=excluded.value,
+                    updated_at=excluded.updated_at
+                """,
+                (key, value, datetime.now().isoformat()),
+            )
+
+    def get_state(self, key: str) -> str | None:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT value FROM kv_state WHERE key = ?", (key,)
+            ).fetchone()
+        return row["value"] if row else None
+
+    def get_state_age_seconds(self, key: str) -> float | None:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT updated_at FROM kv_state WHERE key = ?", (key,)
+            ).fetchone()
+        if not row:
+            return None
+        return (datetime.now() - datetime.fromisoformat(row["updated_at"])).total_seconds()
+
+    # ---------- legacy ----------
 
     def list_preselected_today(self, *, now: datetime) -> list[str]:
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
