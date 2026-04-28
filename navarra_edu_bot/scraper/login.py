@@ -26,10 +26,20 @@ class LoginError(RuntimeError):
     pass
 
 
-async def login_educa(page: Page, *, username: str, password: str, timeout_ms: int = 15000) -> None:
-    """Login to Educa portal via Keycloak SSO and navigate to the personal area with offers."""
-    # Navigate to authenticated area — triggers SSO redirect
-    await page.goto(PORTAL_AREA_PERSONAL_URL, timeout=timeout_ms)
+async def login_educa(page: Page, *, username: str, password: str, timeout_ms: int = 30000) -> None:
+    """Login to Educa portal via Keycloak SSO and navigate to the personal area with offers.
+
+    Default timeout is 30 s because the SSO redirect chain (portal → SSO →
+    Keycloak → portal) plus Railway's transatlantic latency can occasionally
+    push past the previous 15 s budget.
+    """
+    # Navigate to authenticated area — triggers SSO redirect.
+    # `wait_until="domcontentloaded"` returns earlier than the default `load`
+    # event (which waits for all subresources). We only need the form to be in
+    # the DOM, not every image to download.
+    await page.goto(
+        PORTAL_AREA_PERSONAL_URL, timeout=timeout_ms, wait_until="domcontentloaded"
+    )
 
     # Wait for SSO page to load, then click "Usuario Educa" identity provider
     await page.click(USUARIO_EDUCA_BUTTON, timeout=timeout_ms)
