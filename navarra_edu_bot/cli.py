@@ -168,6 +168,17 @@ def run_thursday(
     from pathlib import Path
 
     from navarra_edu_bot.config.loader import load_config
+    from navarra_edu_bot.diagnostics.backup import daily_backup
+    from navarra_edu_bot.diagnostics.canary import (
+        run_fastpath_canary,
+        run_polling_canary,
+    )
+    from navarra_edu_bot.diagnostics.healthcheck import (
+        ping_fail,
+        ping_start,
+        ping_success,
+    )
+    from navarra_edu_bot.diagnostics.snapshot import capture_failure
     from navarra_edu_bot.filter.ranker import rank_offers as _rank_offers
     from navarra_edu_bot.orchestrator import notify_new_offers
     from navarra_edu_bot.scheduler.fast_path_worker import run_fast_path
@@ -185,8 +196,12 @@ def run_thursday(
     from navarra_edu_bot.telegram_bot.callbacks import (
         build_callback_handler,
         build_cancel_handler,
+        build_dryrun_handler,
+        build_logs_handler,
         build_queue_handler,
+        build_restart_handler,
         build_status_handler,
+        build_test_apply_handler,
     )
     from navarra_edu_bot.telegram_bot.client import build_bot_app
     from navarra_edu_bot.telegram_bot.formatter import format_offer_message, offer_buttons
@@ -194,14 +209,33 @@ def run_thursday(
     cfg = load_config(Path("~/.navarra-edu-bot/config.yaml").expanduser())
     storage = Storage(cfg.runtime.storage_path)
     storage.init_schema()
+    storage.prune_events(keep_days=30)
+    storage.log_event(kind="boot", payload={"target_hour": target_hour, "convid_default": convid})
 
     token = _keychain_read("telegram-token")
     chat_id = int(_keychain_read("telegram-chat-id"))
     username = _keychain_read("educa-username")
     password = _keychain_read("educa-password")
 
-    http_session = HttpSession(username=username, password=password, headless=headless)
+    http_session = HttpSession(
+        username=username, password=password, headless=headless, storage=storage
+    )
     state = RunState(queue=ThursdayQueue())
+
+    # Restore applied_today from previous run, if recent
+    try:
+        if storage.get_state_age_seconds("applied_today") and \
+                storage.get_state_age_seconds("applied_today") < 24 * 3600:
+            import json as _json
+            raw = storage.get_state("applied_today")
+            if raw:
+                state.applied_today = set(_json.loads(raw))
+                click.echo(f"applied_today restored from storage: {len(state.applied_today)}")
+    except Exception:
+        pass
+
+    POLL_FAIL_ALERT_THRESHOLD = 3
+    state_poll_fail_count = {"count": 0, "alerted": False}
 
     def _rank_offer_ids(ids: list[str]) -> list[str]:
         """Order offer_ids by user preference using ranker.rank_offers."""
@@ -301,14 +335,61 @@ def run_thursday(
                     f"poll ok @ {datetime.now().isoformat()} | "
                     f"fetched={len(offers)} sent={sent_count} convid={state.discovered_convid}"
                 )
+                storage.log_event(
+                    kind="poll_ok",
+                    payload={
+                        "fetched": len(offers),
+                        "sent": sent_count,
+                        "convid": state.discovered_convid,
+                    },
+                )
+                # Reset failure counter on success
+                state_poll_fail_count["count"] = 0
+                state_poll_fail_count["alerted"] = False
             except SessionExpiredError:
                 click.echo("session expired, refreshing via Playwright")
+                storage.log_event(kind="session_expired", level="warning", payload={})
                 try:
                     await http_session.refresh()
                 except Exception as exc:
                     click.echo(f"refresh failed: {exc}")
+                    storage.log_event(
+                        kind="refresh_failed", level="error", payload={"error": str(exc)}
+                    )
             except Exception as exc:
                 click.echo(f"poll error: {exc}")
+                storage.log_event(
+                    kind="poll_error", level="error", payload={"error": str(exc)}
+                )
+                state_poll_fail_count["count"] += 1
+                # Alert ONCE after N consecutive failures, not every error.
+                if (
+                    state_poll_fail_count["count"] >= POLL_FAIL_ALERT_THRESHOLD
+                    and not state_poll_fail_count["alerted"]
+                ):
+                    state_poll_fail_count["alerted"] = True
+                    try:
+                        await app.bot.send_message(
+                            chat_id=chat_id,
+                            text=(
+                                f"⚠️ <b>Polling roto</b>: "
+                                f"{state_poll_fail_count['count']} fallos consecutivos.\n"
+                                f"Último error: <code>{exc}</code>"
+                            ),
+                            parse_mode="HTML",
+                        )
+                    except Exception:
+                        pass
+                # Capture a failure snapshot (best-effort)
+                try:
+                    await capture_failure(
+                        base=Path(cfg.runtime.storage_path).parent,
+                        label="poll_error",
+                        html=None,
+                        context={"error": str(exc), "ts": datetime.now().isoformat()},
+                    )
+                except Exception:
+                    pass
             await asyncio.sleep(cfg.scheduler.poll_interval_seconds)
 
     async def _verify_submitted(submitted: list[str]) -> tuple[list[str], list[str]]:
@@ -368,16 +449,49 @@ def run_thursday(
         click.echo(
             f"Cycle target: {target_ts.isoformat()}  Prewarm start: {prewarm_start.isoformat()}"
         )
+        storage.log_event(
+            kind="cycle_start", payload={"target": target_ts.isoformat()}
+        )
 
         await state.queue.drain()
         state.next_target_ts = target_ts
+        if state.restart_event is not None:
+            state.restart_event.clear()
 
         # Refresh HTTP session and applied_today set at start of cycle.
+        # Try restoring from storage first (fast path), fall back to Playwright login.
         try:
-            await http_session.refresh()
+            restored = await http_session.try_restore_from_storage()
+            if not restored:
+                await http_session.refresh()
             await _refresh_applied_today()
         except Exception as exc:
             click.echo(f"cycle setup failed: {exc}")
+            storage.log_event(
+                kind="cycle_setup_failed", level="error", payload={"error": str(exc)}
+            )
+
+        # Pre-flight CANARY at the start of the cycle.
+        canary = await run_polling_canary(http_session)
+        click.echo(f"polling_canary: {canary.message}")
+        storage.log_event(
+            kind="canary_polling",
+            level="info" if canary.ok else "warning",
+            payload={"ok": canary.ok, "message": canary.message},
+        )
+        if not canary.ok:
+            try:
+                await app.bot.send_message(
+                    chat_id=chat_id,
+                    text=(
+                        f"⚠️ <b>Canary pre-vuelo falló</b>\n"
+                        f"<code>{canary.message}</code>\n"
+                        f"Revisa antes de las 14:00."
+                    ),
+                    parse_mode="HTML",
+                )
+            except Exception:
+                pass
 
         poll_task = asyncio.create_task(_poll_until(target_ts, app))
 
@@ -385,7 +499,20 @@ def run_thursday(
         if now < prewarm_start:
             wait_s = (prewarm_start - now).total_seconds()
             click.echo(f"Waiting {wait_s:.1f}s until prewarm...")
-            await asyncio.sleep(wait_s)
+            # Honor /restart while we wait
+            if state.restart_event is not None:
+                try:
+                    await asyncio.wait_for(
+                        state.restart_event.wait(), timeout=wait_s
+                    )
+                    click.echo("Cycle aborted by /restart")
+                    storage.log_event(kind="cycle_restart_requested", level="warning")
+                    poll_task.cancel()
+                    return
+                except asyncio.TimeoutError:
+                    pass
+            else:
+                await asyncio.sleep(wait_s)
 
         click.echo("Starting prewarm + fast-path...")
         cycle_error: str | None = None
@@ -393,6 +520,9 @@ def run_thursday(
         elapsed_s = 0.0
         # Use discovered convid if available, otherwise fall back to CLI flag.
         active_convid = state.discovered_convid or convid
+
+        # Healthcheck: tell the watchdog the burst is starting.
+        await ping_start(payload=f"target={target_ts.isoformat()}")
 
         try:
             submitted, elapsed_s = await run_fast_path(
@@ -409,18 +539,66 @@ def run_thursday(
                 rank_fn=_rank_offer_ids,
             )
             click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
+            storage.log_event(
+                kind="fast_path_done",
+                payload={
+                    "submitted": submitted,
+                    "elapsed_s": elapsed_s,
+                    "convid": active_convid,
+                },
+            )
         except Exception as exc:
             cycle_error = str(exc)
             click.echo(f"fast-path error: {exc}")
+            storage.log_event(
+                kind="fast_path_error", level="error", payload={"error": str(exc)}
+            )
+            try:
+                await capture_failure(
+                    base=Path(cfg.runtime.storage_path).parent,
+                    label="fast_path_error",
+                    context={"error": str(exc), "convid": active_convid},
+                )
+            except Exception:
+                pass
 
         verified: list[str] = []
         missing: list[str] = []
         if submitted:
             verified, missing = await _verify_submitted(submitted)
 
+        # Persist applied_today for next container start
+        try:
+            import json as _json
+            storage.set_state(
+                "applied_today", _json.dumps(sorted(state.applied_today))
+            )
+        except Exception:
+            pass
+
         await _send_heartbeat(
             app, target_ts, submitted, verified, missing, elapsed_s, cycle_error
         )
+
+        # Healthcheck: success ping closes the /start, /fail or /(none) cycle.
+        if cycle_error or missing:
+            await ping_fail(payload=f"{cycle_error or 'missing offers'}")
+        else:
+            await ping_success(payload=f"submitted={len(submitted)}")
+
+        # Daily backup once per day (skip if already done today)
+        try:
+            today_marker = datetime.now().strftime("%Y-%m-%d")
+            if state.last_backup_ts is None or \
+                    state.last_backup_ts.strftime("%Y-%m-%d") != today_marker:
+                await daily_backup(
+                    storage_path=cfg.runtime.storage_path,
+                    bot=app.bot,
+                    chat_id=chat_id,
+                )
+                state.last_backup_ts = datetime.now()
+        except Exception as exc:
+            click.echo(f"daily backup failed: {exc}")
 
         # Brief grace, then cancel polling task cleanly
         await asyncio.sleep(10)
@@ -430,7 +608,15 @@ def run_thursday(
         except (asyncio.CancelledError, Exception):
             pass
 
+    async def _dryrun_fetch():
+        """Used by /dryrun handler — fetch + parse offers without notifying."""
+        html = await _fetch_areapersonal_html()
+        return parse_offers(html)
+
     async def _run() -> None:
+        # Initialise the restart event now that we have a running loop
+        state.restart_event = asyncio.Event()
+
         app = build_bot_app(token=token, chat_id=chat_id)
         app.add_handler(
             build_callback_handler(
@@ -444,6 +630,12 @@ def run_thursday(
         app.add_handler(build_status_handler(state))
         app.add_handler(build_cancel_handler(state))
         app.add_handler(build_queue_handler(state))
+        app.add_handler(build_logs_handler(storage))
+        app.add_handler(build_dryrun_handler(state, _dryrun_fetch))
+        app.add_handler(build_restart_handler(state))
+        app.add_handler(
+            build_test_apply_handler(state, apply_email=email, apply_phone=phone)
+        )
 
         async with app:
             await app.start()
