@@ -50,7 +50,7 @@ thursday_open_specialties:
 scheduler:
   daily_start: "13:25"
   daily_end: "14:05"
-  poll_interval_seconds: 15
+  poll_interval_seconds: 120
 
 runtime:
   dry_run: true
