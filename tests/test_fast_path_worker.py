@@ -42,7 +42,7 @@ async def test_run_fast_path_succeeds_on_first_try(fake_browser):
              "navarra_edu_bot.scheduler.fast_path_worker.fire_submission",
              new=AsyncMock(return_value=(["121776"], 1.5)),
          ) as fire, \
-         patch("navarra_edu_bot.scheduler.fast_path_worker.get_ntp_offset", return_value=0.0):
+         patch("navarra_edu_bot.scheduler.fast_path_worker.get_robust_ntp_offset", return_value=0.0):
         added, elapsed = await run_fast_path(
             queue=queue,
             target_ts=target,
@@ -72,7 +72,7 @@ async def test_run_fast_path_retries_on_fire_failure(fake_browser):
          patch("navarra_edu_bot.scheduler.fast_path_worker.login_educa", new=AsyncMock()), \
          patch("navarra_edu_bot.scheduler.fast_path_worker.prewarm_application_context", new=AsyncMock()), \
          patch("navarra_edu_bot.scheduler.fast_path_worker.fire_submission", new=fire_mock), \
-         patch("navarra_edu_bot.scheduler.fast_path_worker.get_ntp_offset", return_value=0.0):
+         patch("navarra_edu_bot.scheduler.fast_path_worker.get_robust_ntp_offset", return_value=0.0):
         added, elapsed = await run_fast_path(
             queue=queue,
             target_ts=target,
@@ -96,7 +96,7 @@ async def test_run_fast_path_aborts_when_queue_empty(fake_browser):
          patch("navarra_edu_bot.scheduler.fast_path_worker.login_educa", new=AsyncMock()) as login, \
          patch("navarra_edu_bot.scheduler.fast_path_worker.prewarm_application_context", new=AsyncMock()) as prewarm, \
          patch("navarra_edu_bot.scheduler.fast_path_worker.fire_submission", new=AsyncMock()) as fire, \
-         patch("navarra_edu_bot.scheduler.fast_path_worker.get_ntp_offset", return_value=0.0):
+         patch("navarra_edu_bot.scheduler.fast_path_worker.get_robust_ntp_offset", return_value=0.0):
         added, elapsed = await run_fast_path(
             queue=queue,
             target_ts=target,
@@ -126,7 +126,7 @@ async def test_run_fast_path_gives_up_after_max_retries(fake_browser):
          patch("navarra_edu_bot.scheduler.fast_path_worker.login_educa", new=AsyncMock()), \
          patch("navarra_edu_bot.scheduler.fast_path_worker.prewarm_application_context", new=AsyncMock()), \
          patch("navarra_edu_bot.scheduler.fast_path_worker.fire_submission", new=AsyncMock(side_effect=ApplicationError("boom"))), \
-         patch("navarra_edu_bot.scheduler.fast_path_worker.get_ntp_offset", return_value=0.0):
+         patch("navarra_edu_bot.scheduler.fast_path_worker.get_robust_ntp_offset", return_value=0.0):
         added, elapsed = await run_fast_path(
             queue=queue,
             target_ts=target,

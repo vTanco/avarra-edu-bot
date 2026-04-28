@@ -6,6 +6,7 @@ the main loop and read by the Telegram handlers.
 """
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -22,3 +23,7 @@ class RunState:
     applied_today: set[str] = field(default_factory=set)
     convocatoria_ended: bool = False
     discovered_convid: Optional[str] = None
+    # Event set by /restart to abort the current cycle. Created lazily by the
+    # main loop because Event() needs a running event loop to be useful.
+    restart_event: Optional[asyncio.Event] = None
+    last_backup_ts: Optional[datetime] = None

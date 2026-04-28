@@ -8,7 +8,11 @@ from typing import Callable, Optional
 
 from playwright.async_api import async_playwright
 
-from navarra_edu_bot.scheduler.ntp_sync import get_ntp_offset, precise_sleep_until
+from navarra_edu_bot.diagnostics.canary import run_fastpath_canary
+from navarra_edu_bot.scheduler.ntp_sync import (
+    get_robust_ntp_offset,
+    precise_sleep_until,
+)
 from navarra_edu_bot.scheduler.thursday_queue import ThursdayQueue
 from navarra_edu_bot.scraper.apply import (
     ApplicationError,
@@ -110,7 +114,7 @@ async def run_fast_path(
         except Exception as exc:
             logger.warning(f"fast_path: rank_fn failed, using FIFO order: {exc}")
 
-    ntp_offset = get_ntp_offset()
+    ntp_offset = get_robust_ntp_offset()
     logger.info(
         f"fast_path: starting prewarm for {len(offer_ids)} offers in parallel, "
         f"ntp_offset={ntp_offset:.3f}s"
@@ -151,6 +155,20 @@ async def run_fast_path(
                 return [], 0.0
 
             logger.info(f"fast_path: {len(ready)}/{len(offer_ids)} contexts prewarmed")
+
+            # Post-prewarm canary on the first ready page: verifies selectors
+            # are intact in case the portal changed HTML between cycles.
+            try:
+                first_page = ready[0][1]
+                canary = await run_fastpath_canary(first_page)
+                if not canary.ok:
+                    logger.warning(
+                        f"fast_path canary FAILED: {canary.message} ({canary.detail})"
+                    )
+                else:
+                    logger.info(f"fast_path canary OK: {canary.message}")
+            except Exception as exc:
+                logger.warning(f"fast_path canary explosion: {exc}")
 
             # Phase 2: every context waits for target_ts, then fires its offer
             start_global = time.monotonic()
