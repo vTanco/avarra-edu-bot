@@ -9,11 +9,15 @@ the SSO flow, we:
   3. Inject them into an aiohttp.ClientSession.
   4. Use HTTP-only requests for subsequent polls (~50 MB vs ~200 MB per browser launch).
 
+Cookies are persisted to the storage layer so that container restarts don't lose
+the session — useful when Railway recycles the container right before 14:00.
+
 When the session expires (detected by the SessionExpiredError from parser), call
 refresh() to re-run the Playwright login.
 """
 from __future__ import annotations
 
+import json
 import logging
 from collections import defaultdict
 from typing import Optional
@@ -24,6 +28,10 @@ from yarl import URL
 
 from navarra_edu_bot.scraper.browser import _LOW_MEM_CHROMIUM_ARGS
 from navarra_edu_bot.scraper.login import PORTAL_AREA_PERSONAL_URL, login_educa
+
+# Storage state keys.
+_COOKIES_KEY = "http_session.cookies"
+_COOKIES_MAX_AGE_S = 6 * 3600  # treat persisted cookies older than 6h as stale
 
 PORTAL_SOLICITUDES_URL = "https://appseducacion.navarra.es/atp/auth/solicitudes.xhtml"
 
@@ -65,21 +73,70 @@ def _inject_playwright_cookies(
 
 
 class HttpSession:
-    """HTTP session that uses Playwright once for login and aiohttp for everything else."""
+    """HTTP session that uses Playwright once for login and aiohttp for everything else.
+
+    If a `storage` is given, cookies are persisted across container restarts via the
+    `kv_state` table; `try_restore_from_storage()` rebuilds the aiohttp session
+    without a Playwright login when the cookies are fresh enough.
+    """
 
     def __init__(
-        self, *, username: str, password: str, headless: bool = True
+        self,
+        *,
+        username: str,
+        password: str,
+        headless: bool = True,
+        storage=None,
     ) -> None:
         self.username = username
         self.password = password
         self.headless = headless
+        self.storage = storage
         self._session: Optional[aiohttp.ClientSession] = None
+
+    async def try_restore_from_storage(self) -> bool:
+        """Rebuild the aiohttp session from previously-saved cookies, no Playwright.
+
+        Returns True if a fresh-enough cookie blob was found and applied. False
+        otherwise — caller should call refresh() to do the full login.
+        """
+        if self.storage is None:
+            return False
+        age = self.storage.get_state_age_seconds(_COOKIES_KEY)
+        if age is None or age > _COOKIES_MAX_AGE_S:
+            return False
+        raw = self.storage.get_state(_COOKIES_KEY)
+        if not raw:
+            return False
+        try:
+            cookies = json.loads(raw)
+        except Exception:
+            return False
+        if not cookies:
+            return False
+
+        if self._session is not None:
+            await self._session.close()
+
+        jar = aiohttp.CookieJar(unsafe=True)
+        injected = _inject_playwright_cookies(jar, cookies)
+        self._session = aiohttp.ClientSession(
+            cookie_jar=jar,
+            headers={"User-Agent": _USER_AGENT},
+            timeout=aiohttp.ClientTimeout(total=20),
+        )
+        logger.info(
+            f"http_session: restored {injected} cookies from storage "
+            f"(age={age:.0f}s), no Playwright launched"
+        )
+        return True
 
     async def refresh(self) -> None:
         """Run a full Playwright login and rebuild the underlying aiohttp session.
 
         Closes any pre-existing session before rebuilding, so this is safe to
-        call repeatedly (e.g. after detecting session expiry).
+        call repeatedly (e.g. after detecting session expiry). When storage is
+        configured, the resulting cookies are persisted for future restarts.
         """
         logger.info("http_session: refreshing cookies via Playwright login")
 
@@ -110,6 +167,16 @@ class HttpSession:
             headers={"User-Agent": _USER_AGENT},
             timeout=aiohttp.ClientTimeout(total=20),
         )
+
+        # Persist for next container restart
+        if self.storage is not None:
+            try:
+                self.storage.set_state(
+                    _COOKIES_KEY, json.dumps(playwright_cookies, default=str)
+                )
+            except Exception as exc:
+                logger.warning(f"http_session: failed to persist cookies: {exc}")
+
         logger.info(f"http_session: extracted {injected} cookies, session ready")
 
     async def fetch_areapersonal_html(self) -> str:

@@ -60,11 +60,17 @@ async def fire_submission(
     offer_ids: list[str],
     timeout_ms: int = 15000,
     start_time: float | None = None,
+    dry_run: bool = False,
 ) -> tuple[list[str], float]:
     """Click add buttons for target offers, then presentar + confirm.
 
     Returns (list_of_added_offer_ids, true_latency_seconds).
     Raises ApplicationError on any failure after the add phase (so caller can retry).
+
+    When `dry_run=True`, the entire flow runs up to and including clicking
+    "Presentar solicitud" and waiting for the confirmation dialog — but the
+    final `doSaveSolicitudBtn` click is skipped. Used by /test-apply to
+    validate selectors without actually consuming a solicitud.
     """
     import time
     if start_time is None:
@@ -109,12 +115,25 @@ async def fire_submission(
     except Exception as exc:
         raise ApplicationError("fire: could not click presentar") from exc
 
+    if dry_run:
+        true_latency = time.monotonic() - start_time
+        logger.info(
+            f"fire (dry_run): would submit {len(added_offers)} offers — "
+            f"final confirm SKIPPED"
+        )
+        # Try to dismiss the dialog without confirming, best-effort
+        try:
+            await page.keyboard.press("Escape")
+        except Exception:
+            pass
+        return added_offers, true_latency
+
     try:
         await page.locator("button#doSaveSolicitudBtn").click(timeout=timeout_ms)
         # Aquí es cuando la petición real sale hacia el servidor de Navarra.
         # Medimos la latencia real aquí.
         true_latency = time.monotonic() - start_time
-        
+
         await page.wait_for_selector("#presentarDlg", state="hidden", timeout=timeout_ms)
         await page.wait_for_load_state("networkidle", timeout=timeout_ms)
     except Exception as exc:
@@ -132,6 +151,7 @@ async def apply_to_offers(
     phone: str,
     convid: str = "1204",
     timeout_ms: int = 15000,
+    dry_run: bool = False,
 ) -> tuple[list[str], float]:
     """Backwards-compatible wrapper: prewarm + fire in sequence."""
     if not offer_ids:
@@ -140,11 +160,18 @@ async def apply_to_offers(
     await prewarm_application_context(
         page, email=email, phone=phone, convid=convid, timeout_ms=timeout_ms,
     )
-    return await fire_submission(page, offer_ids=offer_ids, timeout_ms=timeout_ms)
+    return await fire_submission(
+        page, offer_ids=offer_ids, timeout_ms=timeout_ms, dry_run=dry_run
+    )
 
 
 async def apply_single_offer_flow(
-    offer_id: str, email: str, phone: str, convid: str = "1204",
+    offer_id: str,
+    email: str,
+    phone: str,
+    convid: str = "1204",
+    *,
+    dry_run: bool = False,
 ) -> tuple[list[str], float]:
     """Launch browser, login, apply to a single offer, close. Used by non-Thursday callbacks."""
     from playwright.async_api import async_playwright
@@ -157,14 +184,17 @@ async def apply_single_offer_flow(
     if not username or not password:
         raise ApplicationError("Credentials not found in keychain.")
 
+    from navarra_edu_bot.scraper.browser import _LOW_MEM_CHROMIUM_ARGS
+
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=True, args=_LOW_MEM_CHROMIUM_ARGS)
         try:
             context = await browser.new_context()
             page = await context.new_page()
             await login_educa(page, username=username, password=password)
             return await apply_to_offers(
                 page, offer_ids=[offer_id], email=email, phone=phone, convid=convid,
+                dry_run=dry_run,
             )
         finally:
             await browser.close()
