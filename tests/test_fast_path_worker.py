@@ -106,9 +106,11 @@ async def test_run_fast_path_aborts_when_queue_empty(fake_browser):
             max_retries=3,
         )
 
+    # When the queue is empty we abort *before* touching Playwright at all —
+    # no point launching a browser to do nothing.
     assert len(added) == 0
-    assert login.await_count == 1
-    assert prewarm.await_count == 1
+    assert login.await_count == 0
+    assert prewarm.await_count == 0
     assert fire.await_count == 0
 
 

@@ -40,6 +40,56 @@ _DATATABLE_ROWS_SELECTOR = "div.ui-datatable tbody[id$='_data'] > tr[data-ri]"
 _LOGOUT_LINK = "a[href='/atp/logout.xhtml']"
 _NOT_AUTHENTICATED_INDICATOR = "form#formIndex"
 
+# Phrase shown when the convocatoria has already closed.
+_CONVOCATORIA_ENDED_PATTERNS = [
+    "ha finalizado el plazo de participación",
+    "ha finalizado el plazo de participacion",  # accent-stripped variant
+]
+
+# convid query parameter present on links/forms for new applications.
+_CONVID_RE = re.compile(r"convid=(\d+)")
+
+
+def discover_active_convid(html: str) -> str | None:
+    """Extract the active convocatoria id from the personal area HTML.
+
+    The portal links/forms include `?convid=<N>` whenever offers are open.
+    Returns None if no convid found (can happen if convocatoria ended or
+    if HTML is unauthenticated).
+    """
+    matches = _CONVID_RE.findall(html)
+    if not matches:
+        return None
+    # Highest convid wins — newest convocatoria when several historical refs leak in.
+    return max(matches, key=int)
+
+
+def is_convocatoria_ended(html: str) -> bool:
+    """True if the portal is showing the 'plazo de participación finalizado' page."""
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(" ", strip=True).lower()
+    return any(p in text for p in _CONVOCATORIA_ENDED_PATTERNS)
+
+
+def parse_applied_offer_ids(html: str) -> list[str]:
+    """Parse `/atp/auth/solicitudes.xhtml`-like HTML and return offer_ids already in solicitudes.
+
+    The DOM is the same DataTable structure used elsewhere; the offer_id lives in
+    the second cell. Caller decides what to do with the list (idempotency,
+    post-apply verification, etc.).
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    rows = soup.select(_DATATABLE_ROWS_SELECTOR)
+    ids: list[str] = []
+    for row in rows:
+        cells = row.find_all("td", role="gridcell")
+        if len(cells) < 2:
+            continue
+        offer_id = cells[1].get_text(strip=True)
+        if offer_id:
+            ids.append(offer_id)
+    return ids
+
 
 def parse_offers(html: str) -> list[Offer]:
     soup = BeautifulSoup(html, "html.parser")

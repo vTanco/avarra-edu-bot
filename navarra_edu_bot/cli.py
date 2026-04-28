@@ -168,13 +168,26 @@ def run_thursday(
     from pathlib import Path
 
     from navarra_edu_bot.config.loader import load_config
+    from navarra_edu_bot.filter.ranker import rank_offers as _rank_offers
     from navarra_edu_bot.orchestrator import notify_new_offers
     from navarra_edu_bot.scheduler.fast_path_worker import run_fast_path
+    from navarra_edu_bot.scheduler.run_state import RunState
     from navarra_edu_bot.scheduler.thursday_queue import ThursdayQueue
     from navarra_edu_bot.scraper.http_session import HttpSession
-    from navarra_edu_bot.scraper.parser import SessionExpiredError, parse_offers
+    from navarra_edu_bot.scraper.parser import (
+        SessionExpiredError,
+        discover_active_convid,
+        is_convocatoria_ended,
+        parse_applied_offer_ids,
+        parse_offers,
+    )
     from navarra_edu_bot.storage.db import Storage
-    from navarra_edu_bot.telegram_bot.callbacks import build_callback_handler
+    from navarra_edu_bot.telegram_bot.callbacks import (
+        build_callback_handler,
+        build_cancel_handler,
+        build_queue_handler,
+        build_status_handler,
+    )
     from navarra_edu_bot.telegram_bot.client import build_bot_app
     from navarra_edu_bot.telegram_bot.formatter import format_offer_message, offer_buttons
 
@@ -188,29 +201,83 @@ def run_thursday(
     password = _keychain_read("educa-password")
 
     http_session = HttpSession(username=username, password=password, headless=headless)
+    state = RunState(queue=ThursdayQueue())
 
-    async def _fetch_offers_via_http() -> list:
-        """Fetch offers via HTTP. Refresh cookies on session expiry, retry once."""
+    def _rank_offer_ids(ids: list[str]) -> list[str]:
+        """Order offer_ids by user preference using ranker.rank_offers."""
+        offers = [o for o in (storage.get_offer(i) for i in ids) if o is not None]
+        ranked = _rank_offers(
+            offers,
+            preferred_localities=cfg.user.preferred_localities,
+            specialty_order=cfg.user.specialty_preference_order,
+        )
+        ranked_ids = [o.offer_id for o in ranked]
+        # Append any unknown ids at the end so we don't silently drop them
+        for i in ids:
+            if i not in ranked_ids:
+                ranked_ids.append(i)
+        return ranked_ids
+
+    async def _fetch_areapersonal_html() -> str:
+        """GET areapersonal HTML. Refresh cookies on session expiry."""
         for attempt in range(2):
             try:
-                html = await http_session.fetch_areapersonal_html()
-                return parse_offers(html)
-            except SessionExpiredError:
-                click.echo("session expired, refreshing via Playwright")
-                await http_session.refresh()
-            except Exception:
+                return await http_session.fetch_areapersonal_html()
+            except Exception as exc:
                 if attempt == 0:
-                    # Network blip or first call before refresh — try refresh once
-                    click.echo("http fetch failed, refreshing session")
+                    click.echo(f"http fetch failed ({exc}), refreshing session")
                     await http_session.refresh()
                 else:
                     raise
-        return []
+        return ""
 
-    async def _poll_until(deadline: datetime, app, seen: set[str]) -> None:
+    async def _refresh_applied_today() -> None:
+        """Fetch the user's solicitudes and update state.applied_today."""
+        try:
+            html = await http_session.fetch_solicitudes_html()
+            ids = set(parse_applied_offer_ids(html))
+            state.applied_today = ids
+            click.echo(f"applied_today refreshed: {len(ids)} offer(s)")
+        except Exception as exc:
+            click.echo(f"applied_today refresh failed: {exc}")
+
+    async def _poll_until(deadline: datetime, app) -> None:
+        seen: set[str] = set()
         while datetime.now() < deadline:
             try:
-                offers = await _fetch_offers_via_http()
+                html = await _fetch_areapersonal_html()
+
+                # Detect end of convocatoria → pause polling, notify once
+                if is_convocatoria_ended(html):
+                    if not state.convocatoria_ended:
+                        state.convocatoria_ended = True
+                        try:
+                            await app.bot.send_message(
+                                chat_id=chat_id,
+                                text=(
+                                    "⚠️ <b>Convocatoria finalizada</b>\n"
+                                    "El portal indica que el plazo ha terminado. "
+                                    "Pauso el polling hasta el siguiente ciclo."
+                                ),
+                                parse_mode="HTML",
+                            )
+                        except Exception:
+                            pass
+                    await asyncio.sleep(cfg.scheduler.poll_interval_seconds)
+                    continue
+                else:
+                    state.convocatoria_ended = False
+
+                # Auto-discover convid (used for non-Thursday immediate apply)
+                convid_seen = discover_active_convid(html)
+                if convid_seen and convid_seen != state.discovered_convid:
+                    click.echo(f"discovered convid: {convid_seen}")
+                    state.discovered_convid = convid_seen
+
+                offers = parse_offers(html)
+                state.last_poll_at = datetime.now()
+                state.last_fetched_count = len(offers)
+
                 async def _send(offer):
                     if offer.offer_id in seen:
                         return
@@ -221,36 +288,98 @@ def run_thursday(
                         reply_markup=offer_buttons(offer),
                         parse_mode="HTML",
                     )
+
                 sent_count = await notify_new_offers(
-                    offers=offers, now=datetime.now(), config=cfg,
-                    storage=storage, send=_send,
+                    offers=offers,
+                    now=datetime.now(),
+                    config=cfg,
+                    storage=storage,
+                    send=_send,
+                    applied_ids=state.applied_today,
                 )
                 click.echo(
-                    f"poll ok @ {datetime.now().isoformat()} | fetched={len(offers)} sent={sent_count}"
+                    f"poll ok @ {datetime.now().isoformat()} | "
+                    f"fetched={len(offers)} sent={sent_count} convid={state.discovered_convid}"
                 )
+            except SessionExpiredError:
+                click.echo("session expired, refreshing via Playwright")
+                try:
+                    await http_session.refresh()
+                except Exception as exc:
+                    click.echo(f"refresh failed: {exc}")
             except Exception as exc:
                 click.echo(f"poll error: {exc}")
             await asyncio.sleep(cfg.scheduler.poll_interval_seconds)
 
-    async def _run_one_cycle(queue: ThursdayQueue, app, target_ts: datetime) -> None:
+    async def _verify_submitted(submitted: list[str]) -> tuple[list[str], list[str]]:
+        """After a fast-path, fetch solicitudes again to check what actually landed.
+
+        Returns (verified, missing) where verified are offer_ids that DID end up in
+        the user's solicitudes, and missing are those that didn't.
+        """
+        try:
+            html = await http_session.fetch_solicitudes_html()
+            applied_now = set(parse_applied_offer_ids(html))
+        except Exception as exc:
+            click.echo(f"verify fetch failed: {exc}")
+            return submitted, []  # assume everything went through
+        verified = [oid for oid in submitted if oid in applied_now]
+        missing = [oid for oid in submitted if oid not in applied_now]
+        # Update state for /status etc.
+        state.applied_today = applied_now
+        return verified, missing
+
+    async def _send_heartbeat(
+        app,
+        target_ts: datetime,
+        submitted: list[str],
+        verified: list[str],
+        missing: list[str],
+        elapsed_s: float,
+        cycle_error: str | None = None,
+    ) -> None:
+        """Always-send heartbeat at end of cycle, summarising what happened."""
+        lines = [
+            f"💓 <b>Resumen del ciclo {target_ts.strftime('%Y-%m-%d %H:%M')}</b>",
+            f"📊 Última poll: {state.last_fetched_count} ofertas detectadas",
+            f"📋 Cola al disparo: {len(submitted)} solicitada(s)",
+        ]
+        if submitted:
+            lines.append(f"⚡ Ráfaga: {len(submitted)} en {elapsed_s:.3f}s")
+            if verified:
+                vids = ", ".join(f"<code>{i}</code>" for i in verified)
+                lines.append(f"✅ Confirmadas en solicitudes: {vids}")
+            if missing:
+                mids = ", ".join(f"<code>{i}</code>" for i in missing)
+                lines.append(f"⚠️ Disparadas pero no confirmadas: {mids}")
+        else:
+            lines.append("(no había nada en cola — bot vivo y a la espera)")
+        if cycle_error:
+            lines.append(f"❌ Error: {cycle_error}")
+        try:
+            await app.bot.send_message(
+                chat_id=chat_id, text="\n".join(lines), parse_mode="HTML"
+            )
+        except Exception as exc:
+            click.echo(f"heartbeat send failed: {exc}")
+
+    async def _run_one_cycle(app, target_ts: datetime) -> None:
         prewarm_start = target_ts - timedelta(seconds=prewarm_seconds_before)
         click.echo(
             f"Cycle target: {target_ts.isoformat()}  Prewarm start: {prewarm_start.isoformat()}"
         )
 
-        # Reset queue and seen-set at the start of each cycle
-        await queue.drain()
-        seen: set[str] = set()
+        await state.queue.drain()
+        state.next_target_ts = target_ts
 
-        # Refresh HTTP session cookies at the start of each cycle (one Playwright
-        # login per day; subsequent polls reuse the cookies via aiohttp).
+        # Refresh HTTP session and applied_today set at start of cycle.
         try:
             await http_session.refresh()
+            await _refresh_applied_today()
         except Exception as exc:
-            click.echo(f"http_session refresh failed: {exc}")
+            click.echo(f"cycle setup failed: {exc}")
 
-        # Poll in background until target_ts
-        poll_task = asyncio.create_task(_poll_until(target_ts, app, seen))
+        poll_task = asyncio.create_task(_poll_until(target_ts, app))
 
         now = datetime.now()
         if now < prewarm_start:
@@ -259,53 +388,39 @@ def run_thursday(
             await asyncio.sleep(wait_s)
 
         click.echo("Starting prewarm + fast-path...")
+        cycle_error: str | None = None
+        submitted: list[str] = []
+        elapsed_s = 0.0
+        # Use discovered convid if available, otherwise fall back to CLI flag.
+        active_convid = state.discovered_convid or convid
+
         try:
             submitted, elapsed_s = await run_fast_path(
-                queue=queue,
+                queue=state.queue,
                 target_ts=target_ts,
                 username=username,
                 password=password,
                 email=email,
                 phone=phone,
-                convid=convid,
+                convid=active_convid,
                 max_retries=60,
                 retry_backoff_s=1.0,
                 headless=headless,
+                rank_fn=_rank_offer_ids,
             )
             click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
-
-            if submitted:
-                details = []
-                for oid in submitted:
-                    offer = storage.get_offer(oid)
-                    if offer:
-                        details.append(
-                            f"• <code>{oid}</code>: {offer.specialty} ({offer.locality})"
-                        )
-                    else:
-                        details.append(f"• <code>{oid}</code>")
-                offers_str = "\n".join(details)
-
-                await app.bot.send_message(
-                    chat_id=chat_id,
-                    text=(
-                        f"✅ <b>Ráfaga completada</b>\n\n"
-                        f"Se han presentado {len(submitted)} solicitudes en "
-                        f"<b>{elapsed_s:.3f} segundos</b> desde la apertura de las "
-                        f"{target_hour:02d}:{target_minute:02d}.\n\n"
-                        f"<b>Ofertas aplicadas:</b>\n{offers_str}"
-                    ),
-                    parse_mode="HTML",
-                )
         except Exception as exc:
+            cycle_error = str(exc)
             click.echo(f"fast-path error: {exc}")
-            try:
-                await app.bot.send_message(
-                    chat_id=chat_id,
-                    text=f"⚠️ Error en la ráfaga de las {target_hour:02d}:{target_minute:02d}: {exc}",
-                )
-            except Exception:
-                pass
+
+        verified: list[str] = []
+        missing: list[str] = []
+        if submitted:
+            verified, missing = await _verify_submitted(submitted)
+
+        await _send_heartbeat(
+            app, target_ts, submitted, verified, missing, elapsed_s, cycle_error
+        )
 
         # Brief grace, then cancel polling task cleanly
         await asyncio.sleep(10)
@@ -316,9 +431,19 @@ def run_thursday(
             pass
 
     async def _run() -> None:
-        queue = ThursdayQueue()
         app = build_bot_app(token=token, chat_id=chat_id)
-        app.add_handler(build_callback_handler(storage, thursday_queue=queue))
+        app.add_handler(
+            build_callback_handler(
+                storage,
+                thursday_queue=state.queue,
+                run_state=state,
+                apply_email=email,
+                apply_phone=phone,
+            )
+        )
+        app.add_handler(build_status_handler(state))
+        app.add_handler(build_cancel_handler(state))
+        app.add_handler(build_queue_handler(state))
 
         async with app:
             await app.start()
@@ -327,7 +452,7 @@ def run_thursday(
                 while True:
                     target_ts = compute_next_target(datetime.now(), target_hour, target_minute)
                     try:
-                        await _run_one_cycle(queue, app, target_ts)
+                        await _run_one_cycle(app, target_ts)
                     except Exception as exc:
                         click.echo(f"cycle error: {exc}")
                         # Notify and continue to next day rather than crashing the loop

@@ -21,6 +21,15 @@ class ThursdayQueue:
             self._seen.add(offer_id)
             self._ids.append(offer_id)
 
+    async def remove(self, offer_id: str) -> bool:
+        """Remove an offer from the queue. Returns True if it was present."""
+        async with self._lock:
+            if offer_id not in self._seen:
+                return False
+            self._seen.discard(offer_id)
+            self._ids.remove(offer_id)
+            return True
+
     async def snapshot(self) -> list[str]:
         async with self._lock:
             return list(self._ids)

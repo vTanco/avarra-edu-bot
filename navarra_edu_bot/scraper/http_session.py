@@ -25,6 +25,12 @@ from yarl import URL
 from navarra_edu_bot.scraper.browser import _LOW_MEM_CHROMIUM_ARGS
 from navarra_edu_bot.scraper.login import PORTAL_AREA_PERSONAL_URL, login_educa
 
+PORTAL_SOLICITUDES_URL = "https://appseducacion.navarra.es/atp/auth/solicitudes.xhtml"
+
+
+class ConvocatoriaEndedError(RuntimeError):
+    """Raised when the portal indicates the convocatoria's plazo has finished."""
+
 logger = logging.getLogger(__name__)
 
 _USER_AGENT = (
@@ -121,6 +127,24 @@ class HttpSession:
             if resp.status != 200:
                 raise RuntimeError(
                     f"areapersonal returned HTTP {resp.status}"
+                )
+            return await resp.text()
+
+    async def fetch_solicitudes_html(self) -> str:
+        """GET the user's submitted solicitudes page and return its HTML.
+
+        Used for idempotency (skip offers already applied) and post-apply
+        verification (confirm a fired application landed in the portal).
+        """
+        if self._session is None:
+            raise RuntimeError("HttpSession not initialised; call refresh() first")
+
+        async with self._session.get(
+            PORTAL_SOLICITUDES_URL, allow_redirects=True
+        ) as resp:
+            if resp.status != 200:
+                raise RuntimeError(
+                    f"solicitudes returned HTTP {resp.status}"
                 )
             return await resp.text()
 

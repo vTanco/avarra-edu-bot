@@ -19,7 +19,17 @@ async def notify_new_offers(
     config: AppConfig,
     storage: Storage,
     send: Sender,
+    applied_ids: set[str] | None = None,
 ) -> int:
+    """Notify the user about each new eligible offer.
+
+    Filters out:
+      - Offers that are not eligible for `now` (per filter rules).
+      - Offers we've already notified (already in storage).
+      - Offers already applied today (`applied_ids`), to avoid pestering the user
+        about something that's already in their solicitudes.
+    """
+    applied = applied_ids or set()
     eligible = [
         o
         for o in offers
@@ -32,6 +42,8 @@ async def notify_new_offers(
     )
     sent = 0
     for offer in ranked:
+        if offer.offer_id in applied:
+            continue  # ya aplicada, no spamear al usuario
         if storage.get_offer(offer.offer_id) is not None:
             continue  # ya notificada previamente
         storage.upsert_offer(offer)
