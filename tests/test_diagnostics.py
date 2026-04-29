@@ -113,6 +113,22 @@ async def test_polling_canary_fails_on_http_error():
     assert "HTTP fetch failed" in result.message
 
 
+async def test_polling_canary_ok_even_when_convid_missing():
+    """No convid in the HTML (e.g. outside the publication window) is NOT a fail."""
+    fake = MagicMock()
+    fake.fetch_areapersonal_html = AsyncMock(
+        return_value=(
+            "<html><body>"
+            "<a href='/atp/logout.xhtml'>Logout</a>"
+            "<div class='ui-datatable'><tbody id='_data'></tbody></div>"
+            "</body></html>"
+        )
+    )
+    result = await run_polling_canary(fake)
+    assert result.ok is True
+    assert "convid=n/a" in result.message
+
+
 async def test_polling_canary_detects_convocatoria_ended():
     fake = MagicMock()
     fake.fetch_areapersonal_html = AsyncMock(

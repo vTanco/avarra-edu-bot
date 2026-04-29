@@ -79,15 +79,15 @@ async def run_polling_canary(http_session) -> CanaryResult:
         return CanaryResult(False, f"Parse failed: {exc}")
 
     convid = discover_active_convid(html)
-    if convid is None:
-        return CanaryResult(
-            False, "No se encontró convid activo en la página",
-            detail="missing_convid",
-        )
+    # Note: missing convid is NOT a failure — the portal only exposes the
+    # `?convid=NNNN` link when there's an active convocatoria with offers
+    # visible. Outside the 13:30-14:00 publication window (or between
+    # convocatorias) the link can be absent and the bot is still healthy.
+    convid_str = convid or "n/a"
 
     return CanaryResult(
         True,
-        f"Polling canary OK — {len(offers)} ofertas detectadas, convid={convid}",
+        f"Polling canary OK — {len(offers)} ofertas, convid={convid_str}",
         detail=str(len(offers)),
     )
 
