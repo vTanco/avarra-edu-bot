@@ -33,14 +33,33 @@ Para un humano refrescando F5 manualmente, es una carrera perdida frente a otros
 
 ## 🎬 Demo
 
-> 📸 *Capturas reales del bot en funcionamiento — añade las tuyas en `docs/images/`*
+Capturas reales del bot en funcionamiento. El flujo de extremo a extremo en cuatro pasos:
 
 <div align="center">
 
-| Notificación de oferta | Confirmación al aplicar | Resumen del jueves |
-|:---:|:---:|:---:|
-| ![Notificación](docs/images/telegram-offer.png) | ![Confirmación](docs/images/telegram-applied.png) | ![Resumen](docs/images/thursday-burst.png) |
-| Llega a tu Telegram con un toque para aplicar | Tras pulsar **✅ Aplicar**, el bot ejecuta la solicitud | A las 14:00 dispara todas las confirmadas en milisegundos |
+### 1. Llegan las ofertas elegibles con dos botones
+
+<img src="docs/images/01-offers-list.png" alt="Lista de ofertas con botones Aplicar / Descartar" width="400">
+
+*Cada oferta llega como un mensaje aparte con su título, localidad, centro, jornada y fechas. Pulsas un botón con el pulgar.*
+
+### 2. Pulsas ✅ Aplicar y el bot empieza a ejecutar
+
+<img src="docs/images/02-applying.png" alt="Estado Aplicando..." width="400">
+
+*El mensaje se edita al instante para confirmar que el bot ha cogido la orden y está aplicando.*
+
+### 3. Solicitud presentada con latencia real medida
+
+<img src="docs/images/03-applied.png" alt="Solicitud presentada en 1.42s" width="400">
+
+*El bot reporta el tiempo desde el clic hasta que el portal acepta la solicitud (~1.4 s end-to-end).*
+
+### 4. Otro apply en otra especialidad — el flujo es el mismo
+
+<img src="docs/images/04-thursday-burst.png" alt="Solicitud presentada de DIBUJO en 1.47s" width="400">
+
+*Ya sea Tecnología, Matemáticas, Dibujo o Mantenimiento de Vehículos, el flujo y el tiempo son consistentes.*
 
 </div>
 
