@@ -211,14 +211,28 @@ def run_thursday(
     )
     from navarra_edu_bot.storage.db import Storage
     from navarra_edu_bot.telegram_bot.callbacks import (
+        build_apply_command_handler,
         build_callback_handler,
         build_cancel_handler,
+        build_discard_command_handler,
         build_dryrun_handler,
+        build_filters_handler,
+        build_health_handler,
+        build_help_handler,
+        build_history_handler,
         build_logs_handler,
+        build_mute_handler,
+        build_mute_until_handler,
+        build_next_handler,
+        build_offer_handler,
+        build_pause_handler,
+        build_poll_handler,
         build_queue_handler,
         build_restart_handler,
+        build_resume_handler,
         build_status_handler,
         build_test_apply_handler,
+        build_today_handler,
     )
     from navarra_edu_bot.telegram_bot.client import build_bot_app
     from navarra_edu_bot.telegram_bot.formatter import format_offer_message, offer_buttons
@@ -292,6 +306,61 @@ def run_thursday(
         except Exception as exc:
             click.echo(f"applied_today refresh failed: {exc}")
 
+    async def _poll_now(app) -> tuple[int, int]:
+        """Force one poll RIGHT NOW (used by /poll command).
+
+        Bypasses pause/mute (explicit user request) and uses a fresh `seen` set
+        so every undecided eligible offer is sent with buttons. Returns
+        (fetched_count, sent_count).
+        """
+        # Make sure we have a session — if not, refresh once.
+        try:
+            html = await _fetch_areapersonal_html()
+        except Exception as exc:
+            raise RuntimeError(f"fetch failed: {exc}") from exc
+
+        if is_convocatoria_ended(html):
+            return (0, 0)
+
+        convid_seen = discover_active_convid(html)
+        if convid_seen and convid_seen != state.discovered_convid:
+            state.discovered_convid = convid_seen
+
+        offers = parse_offers(html)
+        state.last_poll_at = datetime.now()
+        state.last_fetched_count = len(offers)
+
+        seen_local: set[str] = set()
+
+        async def _send(offer):
+            if offer.offer_id in seen_local:
+                return
+            seen_local.add(offer.offer_id)
+            await app.bot.send_message(
+                chat_id=chat_id,
+                text=format_offer_message(offer),
+                reply_markup=offer_buttons(offer),
+                parse_mode="HTML",
+            )
+
+        sent_count = await notify_new_offers(
+            offers=offers,
+            now=datetime.now(),
+            config=cfg,
+            storage=storage,
+            send=_send,
+            applied_ids=state.applied_today,
+        )
+        storage.log_event(
+            kind="manual_poll",
+            payload={
+                "fetched": len(offers),
+                "sent": sent_count,
+                "convid": state.discovered_convid,
+            },
+        )
+        return (len(offers), sent_count)
+
     async def _poll_until(deadline: datetime, app) -> None:
         seen: set[str] = set()
         while datetime.now() < deadline:
@@ -339,6 +408,20 @@ def run_thursday(
                         reply_markup=offer_buttons(offer),
                         parse_mode="HTML",
                     )
+
+                if state.paused:
+                    click.echo(
+                        f"poll paused @ {datetime.now().isoformat()} | fetched={len(offers)}"
+                    )
+                    await asyncio.sleep(cfg.scheduler.poll_interval_seconds)
+                    continue
+
+                if state.is_muted():
+                    click.echo(
+                        f"poll muted @ {datetime.now().isoformat()} | fetched={len(offers)}"
+                    )
+                    await asyncio.sleep(cfg.scheduler.poll_interval_seconds)
+                    continue
 
                 sent_count = await notify_new_offers(
                     offers=offers,
@@ -542,28 +625,37 @@ def run_thursday(
         await ping_start(payload=f"target={target_ts.isoformat()}")
 
         try:
-            submitted, elapsed_s = await run_fast_path(
-                queue=state.queue,
-                target_ts=target_ts,
-                username=username,
-                password=password,
-                email=email,
-                phone=phone,
-                convid=active_convid,
-                max_retries=60,
-                retry_backoff_s=1.0,
-                headless=headless,
-                rank_fn=_rank_offer_ids,
-            )
-            click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
-            storage.log_event(
-                kind="fast_path_done",
-                payload={
-                    "submitted": submitted,
-                    "elapsed_s": elapsed_s,
-                    "convid": active_convid,
-                },
-            )
+            if state.paused:
+                cycle_error = "bot paused"
+                click.echo("fast-path skipped because bot is paused")
+                storage.log_event(
+                    kind="fast_path_skipped",
+                    level="warning",
+                    payload={"reason": "paused"},
+                )
+            else:
+                submitted, elapsed_s = await run_fast_path(
+                    queue=state.queue,
+                    target_ts=target_ts,
+                    username=username,
+                    password=password,
+                    email=email,
+                    phone=phone,
+                    convid=active_convid,
+                    max_retries=60,
+                    retry_backoff_s=1.0,
+                    headless=headless,
+                    rank_fn=_rank_offer_ids,
+                )
+                click.echo(f"fast-path submitted {len(submitted)} offers in {elapsed_s:.3f}s")
+                storage.log_event(
+                    kind="fast_path_done",
+                    payload={
+                        "submitted": submitted,
+                        "elapsed_s": elapsed_s,
+                        "convid": active_convid,
+                    },
+                )
         except Exception as exc:
             cycle_error = str(exc)
             click.echo(f"fast-path error: {exc}")
@@ -598,7 +690,7 @@ def run_thursday(
         )
 
         # Healthcheck: success ping closes the /start, /fail or /(none) cycle.
-        if cycle_error or missing:
+        if (cycle_error and cycle_error != "bot paused") or missing:
             await ping_fail(payload=f"{cycle_error or 'missing offers'}")
         else:
             await ping_success(payload=f"submitted={len(submitted)}")
@@ -644,11 +736,56 @@ def run_thursday(
                 apply_phone=phone,
             )
         )
+        app.add_handler(build_help_handler())
         app.add_handler(build_status_handler(state))
+        app.add_handler(
+            build_next_handler(
+                state,
+                poll_interval_seconds=cfg.scheduler.poll_interval_seconds,
+                prewarm_seconds_before=prewarm_seconds_before,
+            )
+        )
+        app.add_handler(
+            build_health_handler(
+                storage,
+                state,
+                poll_interval_seconds=cfg.scheduler.poll_interval_seconds,
+            )
+        )
         app.add_handler(build_cancel_handler(state))
         app.add_handler(build_queue_handler(state))
+        app.add_handler(build_today_handler(storage, state))
+        app.add_handler(build_offer_handler(storage, state))
+        app.add_handler(
+            build_apply_command_handler(
+                storage,
+                state,
+                apply_email=email,
+                apply_phone=phone,
+            )
+        )
+        app.add_handler(build_discard_command_handler(storage, state))
+        app.add_handler(build_history_handler(storage))
+        app.add_handler(
+            build_filters_handler(
+                preferred_localities=cfg.user.preferred_localities,
+                specialty_order=cfg.user.specialty_preference_order,
+                available_lists=[
+                    f"{entry.body}/{entry.specialty}" for entry in cfg.available_lists
+                ],
+                thursday_open_specialties=[
+                    f"{entry.body}/{entry.specialty}"
+                    for entry in cfg.thursday_open_specialties
+                ],
+            )
+        )
         app.add_handler(build_logs_handler(storage))
         app.add_handler(build_dryrun_handler(state, _dryrun_fetch))
+        app.add_handler(build_poll_handler(lambda: _poll_now(app)))
+        app.add_handler(build_pause_handler(state))
+        app.add_handler(build_resume_handler(state))
+        app.add_handler(build_mute_handler(state))
+        app.add_handler(build_mute_until_handler(state))
         app.add_handler(build_restart_handler(state))
         app.add_handler(
             build_test_apply_handler(state, apply_email=email, apply_phone=phone)

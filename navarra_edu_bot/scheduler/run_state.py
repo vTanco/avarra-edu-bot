@@ -27,3 +27,9 @@ class RunState:
     # main loop because Event() needs a running event loop to be useful.
     restart_event: Optional[asyncio.Event] = None
     last_backup_ts: Optional[datetime] = None
+    paused: bool = False
+    muted_until: Optional[datetime] = None
+
+    def is_muted(self, now: Optional[datetime] = None) -> bool:
+        now = now or datetime.now()
+        return self.muted_until is not None and self.muted_until > now

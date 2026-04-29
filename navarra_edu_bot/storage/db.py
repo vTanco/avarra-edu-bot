@@ -111,6 +111,33 @@ class Storage:
             seen_at=datetime.fromisoformat(row["seen_at"]),
         )
 
+    def list_offers_seen_today(self, *, now: datetime) -> list[Offer]:
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = start_of_day + timedelta(days=1)
+        with self._conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM offers
+                WHERE seen_at >= ? AND seen_at < ?
+                ORDER BY seen_at ASC, offer_id ASC
+                """,
+                (start_of_day.isoformat(), end_of_day.isoformat()),
+            ).fetchall()
+        return [
+            Offer(
+                offer_id=row["offer_id"],
+                body=row["body"],
+                specialty=row["specialty"],
+                locality=row["locality"],
+                center=row["center"],
+                hours_per_week=row["hours_per_week"],
+                duration=row["duration"],
+                raw_html_hash=row["raw_html_hash"],
+                seen_at=datetime.fromisoformat(row["seen_at"]),
+            )
+            for row in rows
+        ]
+
     def mark_preselected(self, offer_id: str, *, preselected: bool) -> None:
         with self._conn() as conn:
             conn.execute(
@@ -130,6 +157,15 @@ class Storage:
                 "SELECT preselected FROM decisions WHERE offer_id = ?", (offer_id,)
             ).fetchone()
         return bool(row and row["preselected"])
+
+    def get_preselected_decision(self, offer_id: str) -> bool | None:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT preselected FROM decisions WHERE offer_id = ?", (offer_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        return bool(row["preselected"])
 
     def has_decision(self, offer_id: str) -> bool:
         """True if the user has explicitly chosen apply or discard for this offer.
@@ -189,6 +225,32 @@ class Storage:
                 "payload": json.loads(r["payload"]) if r["payload"] else {},
             }
             for r in rows
+        ]
+
+    def list_recent_decisions(self, *, limit: int = 10) -> list[dict]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT d.offer_id, d.preselected, d.decided_at,
+                       o.body, o.specialty, o.locality, o.center
+                FROM decisions d
+                LEFT JOIN offers o ON o.offer_id = d.offer_id
+                ORDER BY d.decided_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "offer_id": row["offer_id"],
+                "preselected": bool(row["preselected"]),
+                "decided_at": row["decided_at"],
+                "body": row["body"],
+                "specialty": row["specialty"],
+                "locality": row["locality"],
+                "center": row["center"],
+            }
+            for row in rows
         ]
 
     def prune_events(self, *, keep_days: int = 30) -> int:
