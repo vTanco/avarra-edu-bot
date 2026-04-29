@@ -309,11 +309,14 @@ def run_thursday(
     async def _poll_now(app) -> tuple[int, int]:
         """Force one poll RIGHT NOW (used by /poll command).
 
-        Bypasses pause/mute (explicit user request) and uses a fresh `seen` set
-        so every undecided eligible offer is sent with buttons. Returns
-        (fetched_count, sent_count).
+        Bypasses pause/mute, decision-history (already applied/discarded), and
+        applied_today — sends every offer eligible for today's day-of-week with
+        apply/discard buttons. Useful as a 'show me everything you have' button.
+        Returns (fetched_count, sent_count).
         """
-        # Make sure we have a session — if not, refresh once.
+        from navarra_edu_bot.filter.eligibility import is_eligible
+        from navarra_edu_bot.filter.ranker import rank_offers as _rank
+
         try:
             html = await _fetch_areapersonal_html()
         except Exception as exc:
@@ -330,36 +333,48 @@ def run_thursday(
         state.last_poll_at = datetime.now()
         state.last_fetched_count = len(offers)
 
-        seen_local: set[str] = set()
-
-        async def _send(offer):
-            if offer.offer_id in seen_local:
-                return
-            seen_local.add(offer.offer_id)
-            await app.bot.send_message(
-                chat_id=chat_id,
-                text=format_offer_message(offer),
-                reply_markup=offer_buttons(offer),
-                parse_mode="HTML",
-            )
-
-        sent_count = await notify_new_offers(
-            offers=offers,
-            now=datetime.now(),
-            config=cfg,
-            storage=storage,
-            send=_send,
-            applied_ids=state.applied_today,
+        # Eligibility + ranking ONLY. No dedup by decision or applied_today —
+        # /poll is a "show me everything" command.
+        now = datetime.now()
+        eligible = [
+            o
+            for o in offers
+            if is_eligible(o, now, cfg.available_lists, cfg.thursday_open_specialties)
+        ]
+        ranked = _rank(
+            eligible,
+            preferred_localities=cfg.user.preferred_localities,
+            specialty_order=cfg.user.specialty_preference_order,
         )
+
+        sent = 0
+        for offer in ranked:
+            # Persist (so /history etc. see it) but don't filter on it.
+            try:
+                storage.upsert_offer(offer)
+            except Exception:
+                pass
+            try:
+                await app.bot.send_message(
+                    chat_id=chat_id,
+                    text=format_offer_message(offer),
+                    reply_markup=offer_buttons(offer),
+                    parse_mode="HTML",
+                )
+                sent += 1
+            except Exception as exc:
+                click.echo(f"manual_poll send failed for {offer.offer_id}: {exc}")
+
         storage.log_event(
             kind="manual_poll",
             payload={
                 "fetched": len(offers),
-                "sent": sent_count,
+                "eligible": len(eligible),
+                "sent": sent,
                 "convid": state.discovered_convid,
             },
         )
-        return (len(offers), sent_count)
+        return (len(offers), sent)
 
     async def _poll_until(deadline: datetime, app) -> None:
         seen: set[str] = set()

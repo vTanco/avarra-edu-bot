@@ -367,7 +367,7 @@ También puedes hacer lo mismo por comando si ya no encuentras el mensaje origin
 
 | Comando | Qué hace |
 |---|---|
-| `/poll` | Fuerza una poll completa **ahora mismo** y te manda cada oferta elegible y sin decisión con sus botones ✅/❌. Ignora pausa/silencio porque es una acción explícita. Útil cuando el polling ha terminado (después de las 14:00) pero quieres revisar lo que hay en el portal. |
+| `/poll` | Fuerza una poll completa **ahora mismo** y te manda **todas las ofertas elegibles** con sus botones ✅/❌, incluyendo las que ya aplicaste o descartaste antes. Ignora pausa/silencio. Útil para re-evaluar el listado completo cuando ha terminado el polling automático (después de las 14:00). |
 | `/dryrun` | Como `/poll` pero **solo muestra el listado** sin enviar las ofertas con botones. Validación rápida de que el portal responde y se parsea bien. |
 | `/test_apply <offer_id>` | Ejecuta el flujo completo de aplicación con `dry_run=True`: login + navegación + relleno de formulario + clic en "Presentar solicitud" — pero **sin pulsar el confirm final**. Valida que los selectores siguen vivos sin consumir una solicitud real. |
 

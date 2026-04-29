@@ -734,14 +734,13 @@ def build_dryrun_handler(run_state: RunState, fetch_callback) -> CommandHandler:
 
 
 def build_poll_handler(poll_callback) -> CommandHandler:
-    """/poll — force a real poll RIGHT NOW and send each undecided offer with buttons.
+    """/poll — show every offer eligible for today, with apply/discard buttons.
 
-    Bypasses pause/mute (it's an explicit user action) and ignores the cycle's
-    seen-set, so every offer that's currently eligible AND has no decision yet
-    arrives in the chat with apply/discard buttons.
+    Bypasses pause/mute, decision history and applied_today. The intent is "give
+    me the full live list of offers I could apply to right now, even if I
+    already decided", so the user can re-evaluate.
 
     `poll_callback` is an async callable returning (fetched_count, sent_count).
-    Lives in cli.py because it depends on http_session, storage, config, etc.
     """
 
     async def _handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -760,8 +759,8 @@ def build_poll_handler(poll_callback) -> CommandHandler:
             return
         if sent == 0:
             await update.message.reply_text(
-                f"{fetched} oferta(s) detectada(s), pero ninguna pendiente de decisión "
-                "(todas ya aplicadas o descartadas)."
+                f"{fetched} oferta(s) detectada(s), pero ninguna es elegible "
+                "para hoy (filtro día-de-la-semana + listas Disponible/jueves)."
             )
             return
         await update.message.reply_text(
