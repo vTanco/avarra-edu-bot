@@ -34,6 +34,10 @@ async def run_polling_canary(http_session) -> CanaryResult:
       1. HTTP GET areapersonal returns 200.
       2. parser detects the authenticated marker (logout link).
       3. discover_active_convid finds a convid.
+
+    If the session is uninitialised (refresh() failed earlier), this attempts
+    one refresh before giving up — that surfaces the real underlying error
+    instead of the derivative "not initialised" message.
     """
     from navarra_edu_bot.scraper.parser import (
         SessionExpiredError,
@@ -42,8 +46,23 @@ async def run_polling_canary(http_session) -> CanaryResult:
         parse_offers,
     )
 
+    async def _fetch_with_one_refresh() -> str:
+        try:
+            return await http_session.fetch_areapersonal_html()
+        except RuntimeError as exc:
+            # "HttpSession not initialised" — refresh and retry once
+            if "not initialised" in str(exc):
+                try:
+                    await http_session.refresh()
+                except Exception as refresh_exc:
+                    raise RuntimeError(
+                        f"refresh failed: {refresh_exc}"
+                    ) from refresh_exc
+                return await http_session.fetch_areapersonal_html()
+            raise
+
     try:
-        html = await http_session.fetch_areapersonal_html()
+        html = await _fetch_with_one_refresh()
     except Exception as exc:
         return CanaryResult(False, f"HTTP fetch failed: {exc}")
 
