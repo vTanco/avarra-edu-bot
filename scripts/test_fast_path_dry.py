@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 
 from playwright.async_api import async_playwright
@@ -39,10 +40,15 @@ async def main(offer_id: str, convid: str = "1205") -> None:
             context = await browser.new_context()
             page = await context.new_page()
             await login_educa(page, username=username, password=password)
+            email = os.environ.get("APPLY_EMAIL")
+            phone = os.environ.get("APPLY_PHONE")
+            if not email or not phone:
+                logger.error("Set APPLY_EMAIL and APPLY_PHONE env vars before running.")
+                sys.exit(1)
             await prewarm_application_context(
                 page,
-                email="vicente.tanco@edu.uah.es",
-                phone="681864143",
+                email=email,
+                phone=phone,
                 convid=convid,
             )
             logger.info("Prewarm OK. Waiting 3s to simulate trigger delay.")
