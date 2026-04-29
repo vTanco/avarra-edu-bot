@@ -313,6 +313,56 @@ uv run navarra-edu-bot run-thursday --target-hour 16 --target-minute 30
 
 ---
 
+## 💬 Comandos de Telegram
+
+Una vez el bot está corriendo, lo controlas desde tu chat de Telegram. Todos los comandos van con barra (`/comando`).
+
+### Acción inmediata (sobre cada oferta)
+
+Cada oferta llega con dos botones inline. Pulsas **uno**:
+
+| Botón | Comportamiento |
+|---|---|
+| ✅ **Aplicar** | L/M/X/V → aplica al instante. Jueves → encola para disparar a las 14:00:00 con el resto. |
+| ❌ **Descartar** | Marca la oferta como descartada para no volver a notificarla. |
+
+### Consulta del estado del bot
+
+| Comando | Qué hace |
+|---|---|
+| `/status` | Próximo target, hora de la última poll, ofertas en cola, ofertas ya aplicadas hoy, convid activo. |
+| `/queue` | Versión corta de `/status`: solo muestra la cola. |
+| `/logs [N]` | Últimos `N` eventos del log estructurado (default 10, máx 30). Útil para post-mortem. |
+
+### Modificar el comportamiento del ciclo actual
+
+| Comando | Qué hace |
+|---|---|
+| `/cancel <offer_id>` | Quita una oferta de la cola del jueves. Útil si te arrepientes antes de las 14:00. |
+| `/restart` | Aborta el ciclo en curso y arranca uno nuevo (recalcula el siguiente target a 14:00). |
+
+### Validación / debugging
+
+| Comando | Qué hace |
+|---|---|
+| `/dryrun` | Fuerza un fetch de ofertas **ahora mismo** (no espera al próximo intervalo) y muestra las elegibles. Comprueba que el portal responde y que el filtro funciona. |
+| `/test_apply <offer_id>` | Ejecuta el flujo completo de aplicación con `dry_run=True`: login + navegación + relleno de formulario + clic en "Presentar solicitud" — pero **sin pulsar el confirm final**. Valida que los selectores siguen vivos sin consumir una solicitud real. |
+
+### Mensajes que el bot envía sin pedírselo
+
+| Tipo | Cuándo |
+|---|---|
+| 📨 Oferta nueva | Cuando detecta una oferta elegible que no había notificado antes. |
+| 💓 Heartbeat diario | Tras la ráfaga de las 14:00 (alrededor de las 14:05) con el resumen del ciclo. |
+| ⚠️ Polling roto | Tras 3 fallos consecutivos de fetch (una sola vez por incidencia, sin spam). |
+| ⚠️ Canary pre-vuelo | Si el canary del inicio del ciclo detecta un problema (selectores, sesión, convocatoria). |
+| ⚠️ Convocatoria finalizada | Si el portal indica que el plazo ha terminado. |
+| 📦 Backup | Una vez al día, si el chat de Telegram acepta documentos (DB gzip adjunta). |
+
+> 💡 **Tip**: si recibes una alerta de canary o de polling roto, encadena `/dryrun` + `/logs 15` para diagnosticar en 5 segundos sin entrar en Railway.
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```
