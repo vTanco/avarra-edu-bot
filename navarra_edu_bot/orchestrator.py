@@ -43,9 +43,9 @@ async def notify_new_offers(
     sent = 0
     for offer in ranked:
         if offer.offer_id in applied:
-            continue  # ya aplicada, no spamear al usuario
-        if storage.get_offer(offer.offer_id) is not None:
-            continue  # ya notificada previamente
+            continue  # ya aplicada en el portal, no spamear al usuario
+        if storage.has_decision(offer.offer_id):
+            continue  # el usuario ya decidió (apply o discard) en una poll anterior
         storage.upsert_offer(offer)
         await send(offer)
         sent += 1
