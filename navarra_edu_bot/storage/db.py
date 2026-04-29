@@ -131,6 +131,18 @@ class Storage:
             ).fetchone()
         return bool(row and row["preselected"])
 
+    def has_decision(self, offer_id: str) -> bool:
+        """True if the user has explicitly chosen apply or discard for this offer.
+
+        Used to skip re-notification across days: an offer with no decision yet
+        should keep being notified until the user responds.
+        """
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM decisions WHERE offer_id = ?", (offer_id,)
+            ).fetchone()
+        return row is not None
+
     # ---------- events ----------
 
     def log_event(
