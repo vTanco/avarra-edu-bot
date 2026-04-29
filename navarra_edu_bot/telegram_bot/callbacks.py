@@ -23,8 +23,8 @@ def build_callback_handler(
     thursday_queue: ThursdayQueue | None = None,
     run_state: Optional[RunState] = None,
     *,
-    apply_email: str = "vicente.tanco@edu.uah.es",
-    apply_phone: str = "681864143",
+    apply_email: str,
+    apply_phone: str,
 ) -> CallbackQueryHandler:
     """Handle inline-button callbacks (apply / discard).
 

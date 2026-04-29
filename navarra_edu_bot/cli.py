@@ -1,4 +1,5 @@
 import asyncio
+import os
 import subprocess
 
 import click
@@ -147,8 +148,16 @@ def run_once(headless: bool) -> None:
 @click.option("--prewarm-seconds-before", default=300, type=int,
               help="Segundos antes del target para iniciar prewarm (default 300 = 5min)")
 @click.option("--convid", default="1204")
-@click.option("--email", default="vicente.tanco@edu.uah.es")
-@click.option("--phone", default="681864143")
+@click.option(
+    "--email",
+    default=lambda: os.environ.get("APPLY_EMAIL", ""),
+    help="Email to fill in the application form. Defaults to $APPLY_EMAIL.",
+)
+@click.option(
+    "--phone",
+    default=lambda: os.environ.get("APPLY_PHONE", ""),
+    help="Phone to fill in the application form. Defaults to $APPLY_PHONE.",
+)
 def run_thursday(
     headless: bool,
     target_hour: int,
@@ -163,7 +172,15 @@ def run_thursday(
     Runs forever in a loop. After each cycle (which ends just after target hour), it recomputes
     the next target (tomorrow at target_hour) and continues. The Telegram app is kept alive
     across cycles. Designed to survive container lifetime — does not depend on Docker restart.
+
+    Email and phone for the application form must be supplied via --email/--phone or via
+    the APPLY_EMAIL / APPLY_PHONE environment variables.
     """
+    if not email or not phone:
+        raise click.UsageError(
+            "Missing email/phone. Set APPLY_EMAIL and APPLY_PHONE env vars "
+            "(or pass --email and --phone flags)."
+        )
     from datetime import datetime, timedelta
     from pathlib import Path
 

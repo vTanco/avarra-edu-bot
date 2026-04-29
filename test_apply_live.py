@@ -1,21 +1,30 @@
 import asyncio
 import logging
+import os
 import sys
+
 from playwright.async_api import async_playwright
 
-from navarra_edu_bot.scraper.login import login_educa
-from navarra_edu_bot.scraper.apply import apply_to_offers
 from navarra_edu_bot.config.keychain import read_secret
+from navarra_edu_bot.scraper.apply import apply_to_offers
+from navarra_edu_bot.scraper.login import login_educa
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 async def main():
     username = read_secret('educa-username')
     password = read_secret('educa-password')
-    
+    email = os.environ.get('APPLY_EMAIL')
+    phone = os.environ.get('APPLY_PHONE')
+    offer_id = os.environ.get('TEST_OFFER_ID', '121776')
+
     if not username or not password:
         logger.error("Credentials not found in keychain.")
+        sys.exit(1)
+    if not email or not phone:
+        logger.error("Set APPLY_EMAIL and APPLY_PHONE env vars before running.")
         sys.exit(1)
 
     # We use headed mode so you can see it live
@@ -29,13 +38,12 @@ async def main():
             await login_educa(page, username=username, password=password)
             logger.info("Logged in successfully.")
 
-            logger.info("Applying to offer 121776...")
-            # Using the email and phone from your previous session context
+            logger.info(f"Applying to offer {offer_id}...")
             await apply_to_offers(
-                page, 
-                offer_ids=["121776"], 
-                email="vicente.tanco@edu.uah.es", 
-                phone="681864143"
+                page,
+                offer_ids=[offer_id],
+                email=email,
+                phone=phone,
             )
             logger.info("Application process completed!")
             

@@ -355,7 +355,7 @@ security add-generic-password \
 security add-generic-password \
   -s "navarra-edu-bot" \
   -a "educa-username" \
-  -w "vtancoagua" \
+  -w "TU_USUARIO_EDUCA" \
   -U
 
 security add-generic-password \

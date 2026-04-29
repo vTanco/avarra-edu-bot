@@ -205,6 +205,9 @@ EDUCA_USERNAME=tu_usuario_educa
 EDUCA_PASSWORD=tu_password_educa
 TELEGRAM_TOKEN=123456:ABC-DEF...
 TELEGRAM_CHAT_ID=123456789
+APPLY_EMAIL=tu_email@ejemplo.es           # email para el formulario de solicitud
+APPLY_PHONE=600000000                      # teléfono para el formulario de solicitud
+# HEALTHCHECK_PING_URL=https://hc-ping.com/<uuid>  # opcional, watchdog externo
 EOF
 
 docker compose up -d
@@ -238,7 +241,7 @@ uv run navarra-edu-bot ping-telegram
 
 1. Fork del repositorio.
 2. Conecta el repo a Railway.
-3. Define las variables de entorno (`EDUCA_USERNAME`, `EDUCA_PASSWORD`, `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`, `TZ=Europe/Madrid`).
+3. Define las variables de entorno (`EDUCA_USERNAME`, `EDUCA_PASSWORD`, `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`, `APPLY_EMAIL`, `APPLY_PHONE`, `TZ=Europe/Madrid`; opcional `HEALTHCHECK_PING_URL`).
 4. Railway detecta el `Dockerfile` y construye automáticamente.
 5. El comando por defecto es `run-thursday --headless`. Cambia `CMD` en el `Dockerfile` si quieres otro comportamiento.
 

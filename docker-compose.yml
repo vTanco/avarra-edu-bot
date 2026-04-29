@@ -10,6 +10,9 @@ services:
       - EDUCA_PASSWORD=${EDUCA_PASSWORD}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - APPLY_EMAIL=${APPLY_EMAIL}
+      - APPLY_PHONE=${APPLY_PHONE}
+      - HEALTHCHECK_PING_URL=${HEALTHCHECK_PING_URL:-}
       - TZ=Europe/Madrid
     volumes:
       - bot_state:/root/.navarra-edu-bot
