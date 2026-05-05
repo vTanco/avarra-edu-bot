@@ -11,9 +11,34 @@
 [![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)](https://core.telegram.org/bots)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Railway](https://img.shields.io/badge/Railway-Deployed-0B0D0E?logo=railway&logoColor=white)](https://railway.app/)
-[![License](https://img.shields.io/badge/License-Personal_Use-lightgrey)](#-aviso-legal)
+[![Tests](https://img.shields.io/badge/tests-84%20passing-success)](#-tests)
+[![Status](https://img.shields.io/badge/status-en%20producción-success)](https://github.com/vTanco/avarra-edu-bot)
+[![License](https://img.shields.io/badge/License-Personal_Use-lightgrey)](#%EF%B8%8F-aviso-legal)
 
 </div>
+
+> ⚠️ **Bot de uso personal.** Este código existe para automatizar las gestiones de **un único candidato** (yo). No es un producto, no es un servicio compartido, y nadie debería usar mis credenciales. El portal de Navarra puede cambiar y romperlo; las cuentas pueden ser bloqueadas si se abusa. Si quieres adaptarlo para ti, fork → cambia config + credenciales → asume tú la responsabilidad.
+
+---
+
+## 📑 Índice
+
+1. [¿Qué es esto?](#-qué-es-esto)
+2. [Demo en 4 pasos](#-demo)
+3. [Quick Start](#-quick-start)
+4. [Funcionalidades](#-funcionalidades)
+5. [Rutina diaria](#-rutina-diaria)
+6. [Arquitectura](#-arquitectura)
+7. [Stack y por qué](#-stack-y-por-qué)
+8. [Instalación detallada](#-instalación)
+9. [Configuración](#%EF%B8%8F-configuración)
+10. [Comandos CLI](#-comandos-cli)
+11. [Comandos de Telegram](#-comandos-de-telegram)
+12. [FAQ](#-faq)
+13. [Estructura del proyecto](#-estructura-del-proyecto)
+14. [Tests](#-tests)
+15. [Documentación adicional](#-documentación-adicional)
+16. [Aviso legal](#%EF%B8%8F-aviso-legal)
 
 ---
 
@@ -28,6 +53,43 @@ Para un humano refrescando F5 manualmente, es una carrera perdida frente a otros
 3. **Tú decides** desde el móvil con un toque a cuál te interesa.
 4. A las **14:00:00.000** sincronizado por NTP, el bot dispara la solicitud con un navegador pre-autenticado y modal pre-cargado, en menos de 1 segundo.
 5. Si el portal cae por la avalancha (típico de los jueves), **reintenta sin parar** hasta entrar.
+
+### F5 manual vs. Navarra Edu Bot
+
+| Tarea | F5 manual | Navarra Edu Bot |
+|---|---|---|
+| Vigilar el portal 13:30 – 14:00 | Refrescar a mano cada pocos segundos | Polling HTTP automático cada 120 s |
+| Filtrar ofertas | Mental, error humano | Filtro determinista por listas + localidad + jornada |
+| Decidir cuál aplicar | Lectura rápida bajo presión | Telegram con botones, decides relajado |
+| Ejecutar a las 14:00:00 | F5 + 5 clics + scroll | NTP-sync + busy-spin + N solicitudes en paralelo |
+| Latencia clic-a-confirmación | 5–15 s en el mejor caso | **~1.4 s end-to-end** medidos |
+| Si el portal cae | Refrescar y rezar | Retry con backoff hasta entrar |
+| Funciona estando dormido | No | Sí |
+
+---
+
+## ⚡ Quick Start
+
+```bash
+# 1. Clona el repo
+git clone https://github.com/vTanco/avarra-edu-bot.git && cd avarra-edu-bot
+
+# 2. Crea tu config y .env (sustituye los valores)
+cp config.example.yaml config.yaml
+cat > .env << EOF
+EDUCA_USERNAME=tu_usuario
+EDUCA_PASSWORD=tu_password
+TELEGRAM_TOKEN=123456:ABC...
+TELEGRAM_CHAT_ID=123456789
+APPLY_EMAIL=tu_email@ejemplo.es
+APPLY_PHONE=600000000
+EOF
+
+# 3. Arranca
+docker compose up -d
+```
+
+En menos de un minuto deberías ver `pong` al ejecutar `/status` desde tu chat de Telegram. Si quieres detalles, sigue leyendo. Si quieres desplegar en Railway sin máquina propia, salta a [Instalación](#-instalación).
 
 ---
 
@@ -100,54 +162,47 @@ Se abren plazas adicionales a quien acredite formación adecuada aunque no esté
 
 ### Línea temporal de un día cualquiera
 
+```mermaid
+timeline
+    title Día normal del Navarra Edu Bot
+    00:00 — 13:24 : Bot vivo en reposo (~80 MB RAM)
+                  : Acepta /help /status /health en cualquier momento
+    13:25 : Inicio del ciclo
+          : Refresh cookies vía Playwright (10 s, pico ~200 MB)
+          : Lee solicitudes ya aplicadas
+          : Auto-detecta convid activo
+    13:30 — 13:55 : Polling HTTP cada 120 s
+                  : Filtra elegibles (Disponible / jueves abierto)
+                  : Ranking por preferencia
+                  : Telegram con botones por cada oferta
+    13:55 : Pre-warm en paralelo
+          : N navegadores con login + nav + fill + modal abierto
+    14·00·00 : Fire NTP-sincronizado
+             : asyncio.gather de N solicitudes simultáneas
+    14:05 : Heartbeat a Telegram
+          : Verificación post-disparo
+          : Backup gzip diario
+    14:06 — siguiente día : Reposo hasta las 13:25 del próximo día
 ```
-00:00 ─┐
-       │  Bot vivo en reposo (~80 MB RAM).
-       │  Telegram acepta /help, /status, /health, /today, /queue y más
-       │  en cualquier momento.
-       │
-13:25 ─┤
-       │  Inicio del ciclo del día:
-       │    • Refresh de cookies vía Playwright (10 s, pico ~200 MB).
-       │    • Lectura de solicitudes.xhtml para saber qué ya está aplicado.
-       │    • Auto-detección del convid activo.
-       │
-13:30 ─┤  Empieza la ventana de publicación oficial.
-       │  Polling HTTP cada 120 s contra areapersonal.xhtml:
-       │    • Filtra por elegibilidad del día (Disponible vs. jueves abierto).
-       │    • Ordena por preferencia (Tecnología > Matemáticas > Dibujo,
-       │      Pamplona > Orkoien > Barañáin > resto, jornada completa primero).
-       │    • Manda a Telegram cada oferta nueva con botones ✅ Aplicar / ❌ Descartar.
-       │
-       │  El usuario va decidiendo desde el móvil:
-       │    • L/M/X/V → aplicar dispara la solicitud al instante.
-       │    • Jueves  → aplicar añade el offer_id a la cola y espera a las 14:00.
-       │
-13:55 ─┤
-       │  Pre-warm de N navegadores en paralelo (uno por oferta en la cola):
-       │    login + navegación a solicitud.xhtml + email/teléfono rellenados +
-       │    modal "Elegir ofertas" abierto. Todos en espera.
-       │
-14:00:00.000 ─┤
-       │  Sincronización NTP (Real Observatorio Armada) + busy-spin para
-       │  precisión sub-100 ms. Disparo simultáneo de las N solicitudes
-       │  vía asyncio.gather. Cada contexto añade su oferta, presenta y confirma.
-       │
-14:00 ─┤
-       │  Verificación post-disparo: GET solicitudes.xhtml y comprobar que
-       │  cada oferta disparada figura efectivamente como solicitud presentada.
-       │
-14:05 ─┤
-       │  Heartbeat a Telegram con el resumen del día:
-       │    💓 Resumen del ciclo 2026-04-29 14:00
-       │    📊 Última poll: 4 ofertas detectadas
-       │    📋 Cola al disparo: 2 solicitada(s)
-       │    ⚡ Ráfaga: 2 en 0.842 s
-       │    ✅ Confirmadas: 121820, 121936
-       │
-14:06 ─┘
-       └─ El loop calcula el target del día siguiente (mañana 14:00) y
-          entra en reposo hasta las 13:25 del próximo día laborable.
+
+#### Ejemplo de heartbeat al final del ciclo
+
+```text
+💓 Resumen del ciclo 2026-04-29 14:00
+📊 Última poll: 4 ofertas detectadas
+📋 Cola al disparo: 2 solicitada(s)
+⚡ Ráfaga: 2 en 0.842 s
+✅ Confirmadas en solicitudes: 121820, 121936
+```
+
+#### Ejemplo de log estructurado (`/logs 5`)
+
+```text
+ℹ️ 13:30:14  poll_ok       {"fetched": 0, "sent": 0, "convid": null}
+ℹ️ 13:32:14  poll_ok       {"fetched": 3, "sent": 2, "convid": "1207"}
+ℹ️ 13:55:01  cycle_start   {"target": "2026-04-29T14:00:00"}
+ℹ️ 14:00:01  fast_path_done{"submitted": ["121820","121936"], "elapsed_s": 0.842}
+ℹ️ 14:00:02  manual_poll   {"fetched": 3, "eligible": 2, "sent": 2}
 ```
 
 ### Sábados y domingos
@@ -204,6 +259,23 @@ flowchart LR
 | | `scheduler/fast_path_worker.py` | Pre-warm + trigger + retry infinito |
 | **Storage** | `storage/db.py` | SQLite (offers, decisions) |
 | **CLI** | `cli.py` | `ping`, `fetch`, `run-once`, `run-thursday` |
+
+---
+
+## 🧱 Stack y por qué
+
+| Pieza | Por qué se eligió |
+|---|---|
+| **Python 3.12 + uv** | El portal y los selectores cambian; Python permite iterar rápido. `uv` ofrece dependencias reproducibles 10× más rápido que `pip`. |
+| **Playwright (Chromium headless)** | El portal usa JSF + AJAX + Keycloak SSO. Las herramientas HTTP puras tropiezan con tokens y JS; Playwright entiende todo. Sólo se usa para login y la ráfaga; el polling normal va por HTTP plano para ahorrar memoria. |
+| **aiohttp** | Polling cada 120 s con cookies extraídas de Playwright: ~50 MB en lugar de los 200 MB que costaría lanzar Chromium. |
+| **python-telegram-bot v21 (asyncio)** | Botones inline + comandos sin servidor web propio. Telegram absorbe la capa de UI gratis. |
+| **SQLite vía `sqlite3` stdlib** | No hace falta servidor de DB. El estado del bot cabe en menos de un MB. Backup = `cp + gzip`. |
+| **Pydantic v2** | Validación estricta del `config.yaml` al arrancar — un typo en una lista o localidad falla rápido en lugar de provocar 0 ofertas detectadas en silencio. |
+| **structlog + tabla `events`** | Logs JSON-friendly + histórico consultable desde Telegram con `/logs`. |
+| **ntplib (multi-fuente)** | Mediana de 3 servidores NTP para la sincronización a las 14:00:00 sub-100 ms. |
+| **Docker + Railway** | El plan Hobby de Railway ($5/mes) basta para un contenedor 24/7. Dockerfile estándar = portable a cualquier otro PaaS sin cambios. |
+| **pytest + pytest-asyncio** | 84 tests con fixtures HTML reales del portal. Refactors sin miedo. |
 
 ---
 
@@ -407,6 +479,89 @@ También puedes hacer lo mismo por comando si ya no encuentras el mensaje origin
 
 ---
 
+## ❓ FAQ
+
+<details>
+<summary><b>¿Esto es legal? ¿Me pueden bloquear la cuenta?</b></summary>
+
+El bot **no realiza ninguna acción que un humano no pueda hacer manualmente** desde el portal — sólo navega, rellena formularios y pulsa botones igual que harías tú. No usa APIs no documentadas, no salta captchas (no hay), no falsifica IPs.
+
+Dicho esto: el reglamento de adjudicación no autoriza explícitamente automatización, así que el riesgo formal existe. Reduce ese riesgo:
+
+- Polling razonable (cada 120 s, no cada segundo).
+- Sólo aplica a ofertas para las que **tú serías elegible manualmente**.
+- Tú confirmas cada solicitud con un toque — no es un bot que decida solo.
+
+Si Educación de Navarra cambia su política o introduce captchas, el bot fallará y habrá que decidir.
+</details>
+
+<details>
+<summary><b>¿Funciona para otro candidato distinto de ti?</b></summary>
+
+Sí, pero hay que adaptar el `config.yaml` a tus listas Disponible y especialidades del jueves, y poner tus credenciales en las env vars. El código no tiene nada hardcodeado de mi caso particular tras el commit `chore: move PII out of source`. Sigue [Quick Start](#-quick-start) sustituyendo los valores y deberías estar listo en 15 minutos.
+
+Importante: cada usuario debe correr **su propia instancia**. No comparto la mía.
+</details>
+
+<details>
+<summary><b>¿Qué pasa cuando cambia la convocatoria?</b></summary>
+
+El portal expone un parámetro `convid=NNNN` en los enlaces de "Solicitar". El bot detecta automáticamente el convid activo en cada poll (`discover_active_convid`) y lo usa para construir la URL de aplicación. Cuando Educación cambia de convocatoria (1206 → 1207, etc.), el bot se entera en el siguiente fetch y se ajusta solo. **No hay que tocar código.**
+
+Si la convocatoria cierra del todo (página "Ha finalizado el plazo de participación"), el bot detecta la frase, pausa el polling, y avisa a Telegram una vez sin spamear errores hasta que se publique la siguiente convocatoria.
+</details>
+
+<details>
+<summary><b>¿Por qué Railway y no mi Mac con launchd?</b></summary>
+
+Mi Mac portátil no está despierto a las 13:55 todos los días (clases, viajes, batería). Railway tiene un contenedor 24/7 conectado por fibra al backbone de internet. Latencia de ~150-200 ms a Navarra, suficiente para llegar antes que la mayoría.
+
+Si tienes un Mac mini siempre encendido o un servidor casero, hay un `deploy/navarra-edu-bot.plist.template` para launchd. La latencia desde una conexión doméstica española puede ser **mejor** que la de Railway.
+</details>
+
+<details>
+<summary><b>¿Cuánto cuesta tenerlo en Railway?</b></summary>
+
+Plan **Hobby** de Railway: ~$5/mes. El contenedor consume:
+- ~80 MB RAM en reposo
+- ~250 MB de pico durante la ráfaga
+- ~150 MB de pico durante el refresh diario de cookies
+
+Sobre los 8 GB de RAM y 8 vCPU del plan Hobby es totalmente desproporcionado, pero es el plan más barato que permite volúmenes persistentes.
+</details>
+
+<details>
+<summary><b>¿El bot decide por mí, o sólo aplico yo?</b></summary>
+
+**Sólo tú decides.** El bot:
+
+1. Te notifica las ofertas elegibles con dos botones.
+2. Espera tu pulgar en `✅ Aplicar` o `❌ Descartar`.
+3. Sólo entonces ejecuta la solicitud.
+
+Excepción: en jueves, si pulsas `✅ Aplicar` antes de las 14:00, la oferta se encola y se dispara automáticamente a las 14:00:00.000. Sigue siendo decisión tuya — el bot solo retrasa la ejecución para optimizar la latencia de la carrera.
+</details>
+
+<details>
+<summary><b>¿Y si quiero parar el bot un día concreto?</b></summary>
+
+`/pause` desde Telegram lo silencia hasta nuevo aviso. `/mute 60` silencia 60 minutos. `/resume` lo despierta. El proceso sigue vivo en Railway (no se desconecta) — sólo deja de notificar y de aplicar.
+</details>
+
+<details>
+<summary><b>¿Cómo me entero de que algo va mal?</b></summary>
+
+Tres capas de detección:
+
+1. **Heartbeat diario** a las 14:05 con resumen del ciclo. Si no llega → algo se rompió.
+2. **Alerta tras 3 polls fallidos** consecutivos (una sola alerta por incidencia, sin spam).
+3. **Healthchecks.io** opcional (ENV var `HEALTHCHECK_PING_URL`): pinga antes y después de la ráfaga; si falla, te llega email.
+
+Para diagnóstico rápido: `/logs 15` + `/dryrun` desde Telegram, sin entrar en Railway.
+</details>
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```
@@ -437,10 +592,26 @@ navarra-edu-bot/
 ## 🧪 Tests
 
 ```bash
-uv run pytest -v
+uv run pytest -q
+# 84 passed in <1 s
 ```
 
-Los tests usan fixtures HTML reales capturadas del portal en `tests/fixtures/`. Cubren parser, filter, ranking, storage, callbacks y el worker fast-path con mocks de Playwright.
+Los tests usan fixtures HTML reales capturadas del portal en `tests/fixtures/`. Cubren parser, filter, ranking, storage (offers + decisions + events + kv_state), orchestrator, telegram callbacks, scheduler, http_session, NTP multi-fuente y el worker fast-path con mocks de Playwright.
+
+| Capa | Tests |
+|---|---|
+| `tests/test_scraper_parser.py`, `tests/test_parser_extras.py` | 14 |
+| `tests/test_storage*.py` | 12 |
+| `tests/test_orchestrator.py` | 3 |
+| `tests/test_filter_*.py` | 11 |
+| `tests/test_telegram_*.py` | 11 |
+| `tests/test_thursday_queue.py` | 5 |
+| `tests/test_fast_path_worker.py` | 4 |
+| `tests/test_ntp*.py` | 7 |
+| `tests/test_diagnostics.py` | 10 |
+| `tests/test_config_*.py`, `tests/test_keychain.py` | 7 |
+
+Total: **84 tests, ~1 s de tiempo de ejecución**.
 
 ---
 
@@ -464,6 +635,14 @@ Este proyecto es **de uso personal**, desarrollado para automatizar las gestione
 ---
 
 <div align="center">
+
+### 📊 Métricas en producción
+
+![Latencia clic→confirmación](https://img.shields.io/badge/latencia-~1.4%20s-brightgreen)
+![Memoria en reposo](https://img.shields.io/badge/RAM%20reposo-~80%20MB-brightgreen)
+![Pico ráfaga](https://img.shields.io/badge/pico%20r%C3%A1faga-~300%20MB-blue)
+![Polls/día](https://img.shields.io/badge/polls%2Fd%C3%ADa-~12-blue)
+![Tests](https://img.shields.io/badge/tests-84-success)
 
 Hecho con ☕ y mucho `playwright` por **Vicente Tanco Aguas**
 
