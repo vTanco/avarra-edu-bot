@@ -20,16 +20,24 @@ def compute_next_target(now, target_hour: int, target_minute: int):
 
 
 @click.group()
+@click.option("--config", "-c", "config_file", default=None, help="Path to YAML config file.")
+@click.option("--env-file", "env_file", default=None, help="Path to .env file.")
 @click.pass_context
-def main(ctx: click.Context) -> None:
+def main(ctx: click.Context, config_file: str | None = None, env_file: str | None = None) -> None:
     """Navarra Edu Bot CLI."""
     from pathlib import Path
+
+    if config_file:
+        os.environ["CONFIG_PATH"] = config_file
+    if env_file:
+        os.environ["ENV_FILE"] = env_file
 
     from navarra_edu_bot.config.loader import load_config
     from navarra_edu_bot.logging_config import configure_logging
 
     try:
-        cfg = load_config(Path("~/.navarra-edu-bot/config.yaml").expanduser())
+        config_target = os.environ.get("CONFIG_PATH", "~/.navarra-edu-bot/config.yaml")
+        cfg = load_config(Path(config_target).expanduser())
         configure_logging(cfg.runtime.log_path, cfg.runtime.log_level)
     except FileNotFoundError:
         # El comando ping no requiere config.
@@ -92,7 +100,8 @@ def run_once(headless: bool) -> None:
     from navarra_edu_bot.telegram_bot.client import build_bot_app
     from navarra_edu_bot.telegram_bot.formatter import format_offer_message, offer_buttons
 
-    config_path = Path("~/.navarra-edu-bot/config.yaml").expanduser()
+    config_target = os.environ.get("CONFIG_PATH", "~/.navarra-edu-bot/config.yaml")
+    config_path = Path(config_target).expanduser()
     cfg = load_config(config_path)
 
     storage = Storage(cfg.runtime.storage_path)
@@ -237,7 +246,8 @@ def run_thursday(
     from navarra_edu_bot.telegram_bot.client import build_bot_app
     from navarra_edu_bot.telegram_bot.formatter import format_offer_message, offer_buttons
 
-    cfg = load_config(Path("~/.navarra-edu-bot/config.yaml").expanduser())
+    config_target = os.environ.get("CONFIG_PATH", "~/.navarra-edu-bot/config.yaml")
+    cfg = load_config(Path(config_target).expanduser())
     storage = Storage(cfg.runtime.storage_path)
     storage.init_schema()
     storage.prune_events(keep_days=30)

@@ -47,12 +47,12 @@ async def login_educa(page: Page, *, username: str, password: str, timeout_ms: i
     # Fill credentials in Keycloak login form
     await page.fill(USERNAME_INPUT, username, timeout=timeout_ms)
     await page.fill(PASSWORD_INPUT, password, timeout=timeout_ms)
-    await page.click(SUBMIT_BUTTON, timeout=timeout_ms)
-
-    # Wait for redirect back to authenticated portal
+    # Submit credentials and wait for redirect back to authenticated portal
     # The logout link is inside a collapsed dropdown, so it's in the DOM but hidden.
     # Use state='attached' to check DOM presence rather than visibility.
     try:
+        async with page.expect_navigation(timeout=timeout_ms, wait_until="domcontentloaded"):
+            await page.click(SUBMIT_BUTTON, timeout=timeout_ms)
         await page.wait_for_selector(AUTHENTICATED_MARKER, state="attached", timeout=timeout_ms)
     except Exception as exc:
         raise LoginError("Login did not reach authenticated page in time") from exc

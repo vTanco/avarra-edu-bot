@@ -11,3 +11,5 @@ htmlcov/
 !config.example.yaml
 
 .env
+.env.*
+!.env.example

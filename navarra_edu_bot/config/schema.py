@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-BodyCode = Literal["0590", "0598"]
+BodyCode = Literal["0590", "0591", "0592", "0597", "0598"]
 
 
 class ListEntry(BaseModel):
@@ -41,7 +41,7 @@ class SchedulerSettings(BaseModel):
 
     daily_start: str
     daily_end: str
-    poll_interval_seconds: int = Field(ge=5, le=60)
+    poll_interval_seconds: int = Field(ge=5, le=300)
 
 
 class RuntimeSettings(BaseModel):
