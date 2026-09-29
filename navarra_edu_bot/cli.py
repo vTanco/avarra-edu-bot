@@ -4,9 +4,12 @@ import subprocess
 
 import click
 
+from navarra_edu_bot.config.keychain import _load_env_file_if_present, read_secret
+
+_load_env_file_if_present()
+
 
 def _keychain_read(account: str) -> str:
-    from navarra_edu_bot.config.keychain import read_secret
     return read_secret(account)
 
 
@@ -31,6 +34,7 @@ def main(ctx: click.Context, config_file: str | None = None, env_file: str | Non
         os.environ["CONFIG_PATH"] = config_file
     if env_file:
         os.environ["ENV_FILE"] = env_file
+        _load_env_file_if_present()
 
     from navarra_edu_bot.config.loader import load_config
     from navarra_edu_bot.logging_config import configure_logging
